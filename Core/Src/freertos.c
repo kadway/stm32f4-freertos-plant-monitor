@@ -168,10 +168,11 @@ void StartTask02(void const * argument)
 	/* USER CODE BEGIN StartTask02 */
 	uint8_t ackSlave = 0xCE;
 	uint8_t command = 0x00;
-	//uint8_t ackMaster = 0xE3;
-	//uint8_t printData [] = "Teste   \n";
-	//uint8_t dummyData [] = "Teste   \n";
-	//uint8_t dataSize = sizeof(printData)/sizeof(uint8_t);
+	uint8_t ackMaster = 0xE3;
+	uint8_t c_List = 0xBA;
+	uint8_t printData [] = "Teste   \n";
+	uint8_t dummyData [] = "Teste   \n";
+	uint8_t dataSize = sizeof(printData)/sizeof(uint8_t);
 	uint8_t log1 []= "SPI Loop...      \n";
 	uint8_t log3 []= "Sent 0x%X to Master        \n";
 	uint8_t loopcount = 0;
@@ -184,61 +185,39 @@ void StartTask02(void const * argument)
 		HAL_UART_Transmit(&huart1, log1, sizeof(log1)/sizeof(uint8_t),200);
 		/* End debug UART */
 
-		//send Ack
-		//spiready = 0;
+		/* Send slave Ack */
 		HAL_SPI_TransmitReceive_IT(&hspi1, &ackSlave, &command, sizeof(uint8_t));
-
+		osSemaphoreWait (myBinarySem01Handle, portMAX_DELAY);
 		/* Debug UART */
 		sprintf((char*)&log3, "Sent 0x%X to Master", ackSlave);
 		HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
-		/* End debug UART */
-
-		// wait for spi transfer complete
-		//while(!spiready){
-		//	osDelay(10);
-
-		//}
-		osSemaphoreWait (myBinarySem01Handle, portMAX_DELAY);
-
 		sprintf((char*)&log3, "Got 0x%X from Master", command);
 		HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
-//
-//		/* Send data size */
-//		//spiready = 0;
-//		HAL_SPI_TransmitReceive_IT(&hspi1, &dataSize, &command, sizeof(uint8_t));
-//
-//		/* Debug UART */
-//		sprintf((char*)&log3, "Sent %d to Master", dataSize);
-//		HAL_UART_Transmit(&huart1, &dataSize, sizeof(dataSize)/sizeof(uint8_t),200);
-//		/* End debug UART */
-//
-//		// wait for spi transfer complete
-//		osSemaphoreAcquire (myBinarySem01Handle, 200);
-//		//while(!spiready){
-//		//	osDelay(10);
-//
-//	//	}
-//
-//		sprintf((char*)&log3, "Got 0x%X from Master ", command);
-//		HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
-//
-//		/* send data */
-//		//spiready = 0;
-//		sprintf((char*)&printData, "Teste %d\n", loopcount);
-//		HAL_SPI_TransmitReceive_IT(&hspi1, printData, dummyData, sizeof(printData)/sizeof(uint8_t));
-//
-//		// wait for spi transfer complete
-//		osSemaphoreAcquire (myBinarySem01Handle, 200);
-//		//while(!spiready){
-//		//	osDelay(10);
-//		//}
+		/* End debug UART */
+
+		if ( command == c_List){
+
+			/* Send data size */
+			HAL_SPI_TransmitReceive_IT(&hspi1, &dataSize, &command, sizeof(uint8_t));
+			osSemaphoreWait (myBinarySem01Handle, portMAX_DELAY);
+
+			/* Debug UART */
+			sprintf((char*)&log3, "Send %d to Master", dataSize);
+			HAL_UART_Transmit(&huart1, &dataSize, sizeof(dataSize)/sizeof(uint8_t),200);
+			sprintf((char*)&log3, "Got 0x%X from Master", command);
+			HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
+			/* End debug UART */
+
+			if ( command == ackMaster){
+				/* send data */
+				sprintf((char*)&printData, "Teste %d \n", loopcount);
+				HAL_SPI_TransmitReceive_IT(&hspi1, printData, dummyData, sizeof(printData)/sizeof(uint8_t));
+			}
+		}
 
 		loopcount += 1;
+		osDelay(10);
 	}
-
-
-	osDelay(10);
-
 	/* USER CODE END StartTask02 */
 }
 
