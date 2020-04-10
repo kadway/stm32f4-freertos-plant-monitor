@@ -150,7 +150,7 @@ void StartDefaultTask(void const * argument)
 }
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi){
-	//osSemaphoreRelease(myBinarySem01Handle);
+
 	//  __HAL_SPI_CLEAR_OVRFLAG(&hspi1);
 	//  __HAL_SPI_CLEAR_FREFLAG(&hspi1);
 

@@ -84,7 +84,7 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 5, 0);
+  //HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 5, 0);
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
