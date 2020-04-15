@@ -1,0 +1,3 @@
+[submodule "w25qxx_library"]
+	path = w25qxx_library
+	url = https://github.com/nimaltd/w25qxx
