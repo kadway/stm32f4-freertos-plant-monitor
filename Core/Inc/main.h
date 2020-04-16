@@ -32,6 +32,7 @@ extern "C" {
 #include "spi.h"
 #include "usart.h"
 #include <stdio.h>
+#include <string.h>
 #include "cmsis_os.h"
 
 extern osThreadId defaultTaskHandle;

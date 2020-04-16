@@ -186,13 +186,13 @@ void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
-  uint8_t log1 []= "Default task runs...    \n";
-  uint8_t loopcount = 0;
+  //uint8_t log1 []= "Default task runs...    \n";
+  //uint8_t loopcount = 0;
   for(;;)
   {		/* debug UART */
-		sprintf((char*)&log1, "Default task runs:%d", loopcount);
-		loopcount += 1;
-		HAL_UART_Transmit(&huart1, log1, sizeof(log1)/sizeof(uint8_t),200);
+		//sprintf((char*)&log1, "Default task runs:%d", loopcount);
+		//loopcount += 1;
+		//HAL_UART_Transmit(&huart1, log1, sizeof(log1)/sizeof(uint8_t),200);
 		/* End debug UART */
     osDelay(1000);
   }
@@ -213,18 +213,20 @@ void StartTask02(void const * argument)
 	uint8_t command = 0x00;
 	uint8_t ackMaster = 0xE3;
 	uint8_t c_List = 0xBA;
-	uint8_t printData [] = "Teste   \n";
-	uint8_t dummyData [] = "Teste   \n";
+	uint8_t printData [] = "Teste 0000 \n";
+	uint8_t dummyData [] = "Teste 0000 \n";
 	uint8_t dataSize = sizeof(printData)/sizeof(uint8_t);
 	uint8_t log1 []= "SPI Loop...      \n";
-	uint8_t log3 []= "Sent 0x%X to Master        \n";
+	uint8_t log2 []= "logx:Sent 0x00 to Master  Got 0x00 from Master                       \n";
 	uint8_t loopcount = 0;
-	osEvent message;
+	//osEvent message;
 	//osSemaphoreWait(myBinarySem01Handle, portMAX_DELAY);
 	/* Infinite loop */
 	for(;;){
 		/* debug UART */
-		sprintf((char*)&log1, "SPI Loop... %d", loopcount);
+
+		memset(log1, 0x00, sizeof log1);
+		sprintf((char*)&log1, "SPI Loop... %d\n", loopcount);
 		HAL_UART_Transmit(&huart1, log1, sizeof(log1)/sizeof(uint8_t),200);
 		/* End debug UART */
 
@@ -233,30 +235,33 @@ void StartTask02(void const * argument)
 		osSemaphoreWait (spiEspSemphHandle, portMAX_DELAY);
 		//message = osMessageGet(spiEspQueueHandle, command, 200);
 		/* Debug UART */
-		sprintf((char*)&log3, "Sent 0x%X to Master", ackSlave);
-		HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
-		sprintf((char*)&log3, "Got 0x%X from Master", command);
-		HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
+		memset(log2, 0x00, sizeof log2);
+		sprintf((char*)&log2, "log2:Sent 0x%X to Master  Got 0x%X from Master\n", ackSlave, command);
+		HAL_UART_Transmit(&huart1, log2, sizeof(log2)/sizeof(uint8_t),200);
 		/* End debug UART */
 
 		if ( command == c_List){
-
 			/* Send data size */
 			HAL_SPI_TransmitReceive_DMA(&hspi2, &dataSize, &command, sizeof(uint8_t));
 			//message = osMessageGet(spiEspQueueHandle, command, 200);
 			osSemaphoreWait (spiEspSemphHandle, portMAX_DELAY);
 			/* Debug UART */
-			sprintf((char*)&log3, "Send %d to Master", dataSize);
-			HAL_UART_Transmit(&huart1, &dataSize, sizeof(dataSize)/sizeof(uint8_t),200);
-			sprintf((char*)&log3, "Got 0x%X from Master", command);
-			HAL_UART_Transmit(&huart1, log3, sizeof(log3)/sizeof(uint8_t),200);
+			memset(log2, 0x00, sizeof log2);
+			sprintf((char*)&log2, "log3:Sent 0x%X to Master  Got 0x%X from Master\n", dataSize, command);
+			HAL_UART_Transmit(&huart1, log2, sizeof(log2)/sizeof(uint8_t),200);
 			/* End debug UART */
 
 			if ( command == ackMaster){
 				/* send data */
-				sprintf((char*)&printData, "Teste %d \n", loopcount);
+				memset(printData, 0x00, sizeof printData);
+				sprintf((char*)&printData, "Teste %d\n", loopcount);
 				HAL_SPI_TransmitReceive_DMA(&hspi2, printData, dummyData, sizeof(printData)/sizeof(uint8_t));
 				osSemaphoreWait (spiEspSemphHandle, portMAX_DELAY);
+				/* Debug UART */
+				memset(log2, 0x00, sizeof log2);
+				sprintf((char*)&log2, "log4:Sent %s", (char*)&printData);
+				HAL_UART_Transmit(&huart1, log2, sizeof(log2)/sizeof(uint8_t),200);
+				/* End debug UART */
 			}
 		}
 
