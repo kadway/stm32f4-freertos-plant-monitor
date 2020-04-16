@@ -1,8 +1,8 @@
 /**
   ******************************************************************************
-  * File Name          : gpio.c
-  * Description        : This file provides code for the configuration
-  *                      of all used GPIO pins.
+  * File Name          : dma.h
+  * Description        : This file contains all the function prototypes for
+  *                      the dma.c file
   ******************************************************************************
   * @attention
   *
@@ -16,38 +16,41 @@
   *
   ******************************************************************************
   */
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __dma_H
+#define __dma_H
+
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "gpio.h"
-/* USER CODE BEGIN 0 */
+#include "main.h"
 
-/* USER CODE END 0 */
+/* DMA memory to memory transfer handles -------------------------------------*/
 
-/*----------------------------------------------------------------------------*/
-/* Configure GPIO                                                             */
-/*----------------------------------------------------------------------------*/
-/* USER CODE BEGIN 1 */
+/* USER CODE BEGIN Includes */
 
-/* USER CODE END 1 */
+/* USER CODE END Includes */
 
-/** Configure pins as 
-        * Analog 
-        * Input 
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
-void MX_GPIO_Init(void)
-{
+/* USER CODE BEGIN Private defines */
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
+/* USER CODE END Private defines */
 
+void MX_DMA_Init(void);
+
+/* USER CODE BEGIN Prototypes */
+
+/* USER CODE END Prototypes */
+
+#ifdef __cplusplus
 }
+#endif
 
-/* USER CODE BEGIN 2 */
+#endif /* __dma_H */
 
-/* USER CODE END 2 */
+/**
+  * @}
+  */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
