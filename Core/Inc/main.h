@@ -32,13 +32,12 @@ extern "C" {
 #include "spi.h"
 #include "usart.h"
 #include <stdio.h>
+#include <string.h>
 #include "cmsis_os.h"
-
-extern uint8_t spiready;
 
 extern osThreadId defaultTaskHandle;
 extern osThreadId myTask02Handle;
-extern osSemaphoreId myBinarySem01Handle;
+extern osSemaphoreId spiEspSemphHandle;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
