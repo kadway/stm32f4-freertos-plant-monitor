@@ -34,6 +34,7 @@ extern "C" {
 #include <stdio.h>
 #include <string.h>
 #include "cmsis_os.h"
+#include "w25qxx.h"
 
 extern osThreadId defaultTaskHandle;
 extern osThreadId myTask02Handle;
