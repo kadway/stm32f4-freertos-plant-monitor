@@ -70,8 +70,63 @@ int _write(int file, char *data, int len)
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
+void extFlashInit(void);
 /* USER CODE BEGIN PFP */
+void extFlashInit(void){
+	uint16_t i=0;
+	uint16_t dataSize = 0;
+	uint8_t *pInit;
+	uint8_t init;
+	W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
 
+	//to do: check for better way of making the init check instead of using additional pointer and variable
+	pInit  = (uint8_t*) &monitorConf.status;
+	init = *pInit;
+	init &= 0b00111111;
+
+	if(init !=0b000110010){
+		//if(1){
+		// init general configurations
+		monitorConf.status.reserved0=0;
+		monitorConf.status.reserved1=1;
+		monitorConf.status.reserved2=0;
+		monitorConf.status.reserved3=0;
+		monitorConf.status.reserved4=1;
+		monitorConf.status.reserved5=1;
+		monitorConf.status.userInit = 0;
+		monitorConf.status.closedLoop = 0;
+		monitorConf.nArea = N_AREA;
+		monitorConf.nSens = N_SENS;
+		monitorConf.nPump = N_PUMP;
+		monitorConf.nSov = N_SOV;
+		monitorConf.lastWrittenFlashAddr = FLASH_READINGS_ADDR;
+		monitorConf.measInt = MEAS_INTERVAL;
+
+		//save to external flash
+		W25qxx_EraseChip();
+		//W25qxx_EraseBlock(FLASH_CONFIG_ADDR);
+		W25qxx_WritePage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
+		printf("Default general configuration initialized to flash\r\n");
+
+		//init default watering areas
+		dataSize = sizeof(waterArea)/sizeof(uint8_t);
+		waterArea.wTime = WATERING_TIME;
+		waterArea.threshold = 0;
+		memset(waterArea.sensID, 0, sizeof(waterArea.sensID));
+		memset(waterArea.sovID, 0, sizeof(waterArea.sovID));
+
+		for (i=0; i<N_AREA; i++){
+			waterArea.pumpID = i+1;
+			//save to external flash
+			W25qxx_WriteSector((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*(dataSize), dataSize);
+		}
+		//printf("Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
+	}
+	else{
+		printf("Configuration recoverd from flash\r\n");
+	}
+
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -114,6 +169,7 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   W25qxx_Init();
+  extFlashInit();
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

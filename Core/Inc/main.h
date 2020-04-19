@@ -47,7 +47,60 @@ extern osSemaphoreId spiEspSemphHandle;
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+#define FLASH_CONFIG_ADDR      0x00000000 //Memory block0 sector 0 - address of general configuration
+#define FLASH_AREA_ADDR        0x00001001 //Memory block0 sector 1 - start address of watering areas configuration
+#define FLASH_READINGS_ADDR    0x01000001 //Memory block1 - start address of stored data from ADC readings
 
+#define N_AREA 2  //default numumber of watering areas
+#define N_SENS 3  //default numumber of moisture sensors
+#define N_PUMP 2  //default numumber of watering pumps
+#define N_SOV  2  //default numumber of solenoid valves
+#define WATERING_TIME 1  //default watering time (minutes)
+#define MEAS_INTERVAL 10 //default interval for ADC readings (minutes)
+
+/*
+ * Structure with relevant configurations to be stored in external flash and loaded on startup
+ * Default initialization writes 0bxx0110010 to the reserved bits
+ * This is a criteria for checking if the memory already has the the default data written into it
+ */
+
+
+typedef struct status{
+	uint8_t reserved0:1;
+	uint8_t reserved1:1;
+	uint8_t reserved2:1;
+	uint8_t reserved3:1;
+	uint8_t reserved4:1;
+	uint8_t reserved5:1;
+	uint8_t closedLoop:1;
+	uint8_t userInit:1;
+} status_t;
+typedef struct generalConfig{
+	status_t status;
+	uint8_t nArea;   //number of watering areas
+	uint8_t nSens;  //number of moisture sensors
+	uint8_t nPump;  //number of water pumps
+	uint8_t nSov;   //number of solenoid valves
+	uint32_t lastWrittenFlashAddr; //last address where readings from sensors was written
+	uint16_t measInt; //interval for ADC readings (minutes)
+}generalConfig_t;
+
+/*
+ * Structure defining relevant parameters for each watering area
+ *
+ */
+
+typedef struct wArea{
+	uint8_t sensID[50]; //ids of associated sensors in the watering area
+	uint8_t sovID[25];  //ids of associated solenoid valves in the watering area
+	uint8_t pumpID;      //id of the pump watering this particular area
+	uint16_t wTime;      //watering time for this area
+	uint16_t threshold;  //threshold for closed loop watering control
+}wArea_t;
+
+//general configuration structures
+generalConfig_t monitorConf;
+wArea_t waterArea;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

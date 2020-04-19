@@ -186,15 +186,20 @@ void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
-  //uint8_t log1 []= "Default task runs...    \n";
-  //uint8_t loopcount = 0;
+
+  uint8_t i =0;
+  for(i=0;i<N_AREA;i++){
+	  W25qxx_ReadSector((uint8_t*)&waterArea,FLASH_READINGS_ADDR,i*sizeof(waterArea),sizeof(waterArea));
+	  printf("Found waterArea %d in flash\r\n", waterArea.pumpID);
+	  osDelay(1000);
+  }
+
   for(;;)
-  {		/* debug UART */
-		//sprintf((char*)&log1, "Default task runs:%d", loopcount);
-		//loopcount += 1;
-		//HAL_UART_Transmit(&huart1, log1, sizeof(log1)/sizeof(uint8_t),200);
-		/* End debug UART */
-    osDelay(1000);
+  {
+	 // sprintf((char*)&buffer, "log2:Sent 0x%X to Master  Got 0x%X from Master\n", ackSlave, command);
+	 // HAL_UART_Transmit(&huart1, &buffer[0], sizeof(init_message),800);
+
+    osDelay(5000);
   }
   /* USER CODE END StartDefaultTask */
 }
