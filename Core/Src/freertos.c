@@ -49,9 +49,10 @@
 
 
 /* USER CODE END Variables */
-osThreadId defaultTaskHandle;
+osThreadId spiEspComTaskHandle;
 osThreadId myTask02Handle;
 osMessageQId spiEspQueueHandle;
+osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,7 +60,7 @@ osSemaphoreId spiEspSemphHandle;
    
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
+void spiEspComTask(void const * argument);
 void StartTask02(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -142,7 +143,6 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of myBinarySem01 */
   osSemaphoreDef(spiEspSemph);
   spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
-
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -162,8 +162,9 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 300);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+  osThreadDef(spiEspComT, spiEspComTask, osPriorityNormal, 0, 300);
+  spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
   /* definition and creation of myTask02 */
   osThreadDef(myTask02, StartTask02, osPriorityIdle, 0, 300);
@@ -174,6 +175,15 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_THREADS */
 
 }
+void DMATransferComplete(DMA_HandleTypeDef *hdma){
+	printf("txrx complete\n");
+	osSemaphoreRelease (spiEspSemphHandle);
+
+}
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi){
+
+}
+
 
 /* USER CODE BEGIN Header_StartDefaultTask */
 /**
@@ -182,26 +192,55 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+void spiEspComTask(void const * argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
+	uint8_t ackSlave = 0xCE;
+	uint8_t command = 0x00;
+	uint8_t ackMaster = 0xE3;
+	uint8_t nElm = 0;
 
-  uint8_t i =0;
-  for(i=0;i<N_AREA;i++){
-	  W25qxx_ReadSector((uint8_t*)&waterArea,FLASH_READINGS_ADDR,i*sizeof(waterArea),sizeof(waterArea));
-	  printf("Found waterArea %d in flash\r\n", waterArea.pumpID);
-	  osDelay(1000);
-  }
+	wArea_t dummywArea; //dummy for spi transaction
+	gConf_t dummygConf; //dummy for spi transaction
+	uint16_t i=0;
 
-  for(;;)
-  {
-	 // sprintf((char*)&buffer, "log2:Sent 0x%X to Master  Got 0x%X from Master\n", ackSlave, command);
-	 // HAL_UART_Transmit(&huart1, &buffer[0], sizeof(init_message),800);
+	/* need to take the semaphor the first time....*/
+	osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
-    osDelay(5000);
-  }
-  /* USER CODE END StartDefaultTask */
+	for(;;){
+
+		/* Send slave Ack */
+		HAL_SPI_TransmitReceive_DMA(&hspi2, &ackSlave, &command, sizeof(uint8_t));
+		osSemaphoreWait (spiEspSemphHandle, osWaitForever);
+
+		switch(command){
+
+		case ESP_GET_CONF:
+			/* Send general configuration data */
+			W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf)/sizeof(uint8_t));
+			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&monitorConf, (uint8_t*)&dummygConf, sizeof(monitorConf)/sizeof(uint8_t));
+			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
+			break;
+
+		case ESP_GET_AREA:
+			/* Send number of wArea elements */
+			nElm = monitorConf.nArea;
+			HAL_SPI_TransmitReceive_DMA(&hspi2, &nElm, &command, sizeof(uint8_t));
+			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
+
+			if ( command == ackMaster){
+				/* send wArea data */
+				for (i=0; i<nElm; i++){
+					W25qxx_ReadSector((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*sizeof(waterArea), sizeof(waterArea)/sizeof(uint8_t));
+					HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*) &waterArea,(uint8_t*) &dummywArea, sizeof(waterArea)/sizeof(uint8_t));
+					osSemaphoreWait (spiEspSemphHandle, osWaitForever);
+				}
+			}
+			break;
+		default:
+			break;
+		}
+		osDelay(10);
+	}
 }
 
 /* USER CODE BEGIN Header_StartTask02 */
@@ -214,65 +253,20 @@ void StartDefaultTask(void const * argument)
 void StartTask02(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
-	uint8_t ackSlave = 0xCE;
-	uint8_t command = 0x00;
-	uint8_t ackMaster = 0xE3;
-	uint8_t c_List = 0xBA;
-	uint8_t printData [] = "Teste 0000 \n";
-	uint8_t dummyData [] = "Teste 0000 \n";
-	uint8_t dataSize = sizeof(printData)/sizeof(uint8_t);
-	uint8_t log1 []= "SPI Loop...      \n";
-	uint8_t log2 []= "logx:Sent 0x00 to Master  Got 0x00 from Master                       \n";
-	uint8_t loopcount = 0;
-	//osEvent message;
-	//osSemaphoreWait(myBinarySem01Handle, portMAX_DELAY);
-	/* Infinite loop */
-	for(;;){
-		/* debug UART */
+	  //uint8_t i =0;
+	  /*for(i=0;i<N_AREA;i++){
+		  W25qxx_ReadSector((uint8_t*)&waterArea,FLASH_READINGS_ADDR,i*sizeof(waterArea),sizeof(waterArea));
+		  printf("Found waterArea %d in flash\r\n", waterArea.pumpID);
+		  osDelay(1000);
+	  }*/
 
-		memset(log1, 0x00, sizeof log1);
-		sprintf((char*)&log1, "SPI Loop... %d\n", loopcount);
-		HAL_UART_Transmit(&huart1, log1, sizeof(log1)/sizeof(uint8_t),200);
-		/* End debug UART */
+	  for(;;)
+	  {
+		 // sprintf((char*)&buffer, "log2:Sent 0x%X to Master  Got 0x%X from Master\n", ackSlave, command);
+		 // HAL_UART_Transmit(&huart1, &buffer[0], sizeof(init_message),800);
 
-		/* Send slave Ack */
-		HAL_SPI_TransmitReceive_DMA(&hspi2, &ackSlave, &command, sizeof(uint8_t));
-		osSemaphoreWait (spiEspSemphHandle, portMAX_DELAY);
-		//message = osMessageGet(spiEspQueueHandle, command, 200);
-		/* Debug UART */
-		memset(log2, 0x00, sizeof log2);
-		sprintf((char*)&log2, "log2:Sent 0x%X to Master  Got 0x%X from Master\n", ackSlave, command);
-		HAL_UART_Transmit(&huart1, log2, sizeof(log2)/sizeof(uint8_t),200);
-		/* End debug UART */
-
-		if ( command == c_List){
-			/* Send data size */
-			HAL_SPI_TransmitReceive_DMA(&hspi2, &dataSize, &command, sizeof(uint8_t));
-			//message = osMessageGet(spiEspQueueHandle, command, 200);
-			osSemaphoreWait (spiEspSemphHandle, portMAX_DELAY);
-			/* Debug UART */
-			memset(log2, 0x00, sizeof log2);
-			sprintf((char*)&log2, "log3:Sent 0x%X to Master  Got 0x%X from Master\n", dataSize, command);
-			HAL_UART_Transmit(&huart1, log2, sizeof(log2)/sizeof(uint8_t),200);
-			/* End debug UART */
-
-			if ( command == ackMaster){
-				/* send data */
-				memset(printData, 0x00, sizeof printData);
-				sprintf((char*)&printData, "Teste %d\n", loopcount);
-				HAL_SPI_TransmitReceive_DMA(&hspi2, printData, dummyData, sizeof(printData)/sizeof(uint8_t));
-				osSemaphoreWait (spiEspSemphHandle, portMAX_DELAY);
-				/* Debug UART */
-				memset(log2, 0x00, sizeof log2);
-				sprintf((char*)&log2, "log4:Sent %s", (char*)&printData);
-				HAL_UART_Transmit(&huart1, log2, sizeof(log2)/sizeof(uint8_t),200);
-				/* End debug UART */
-			}
-		}
-
-		loopcount += 1;
-		osDelay(10);
-	}
+	    osDelay(5000);
+	  }
   /* USER CODE END StartTask02 */
 }
 

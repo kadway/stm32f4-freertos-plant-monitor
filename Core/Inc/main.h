@@ -36,8 +36,9 @@ extern "C" {
 #include "cmsis_os.h"
 #include "w25qxx.h"
 
-extern osThreadId defaultTaskHandle;
+extern osThreadId spiEspComTaskHandle;
 extern osThreadId myTask02Handle;
+extern osSemaphoreId spiEspSemphTXHandle;
 extern osSemaphoreId spiEspSemphHandle;
 
 /* Private includes ----------------------------------------------------------*/
@@ -47,43 +48,63 @@ extern osSemaphoreId spiEspSemphHandle;
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+
+/*
+ * Definitions for external flash access
+ */
+#define FLASH_DEF_INIT         0xABCD     //Bytes for checking default initialization
 #define FLASH_CONFIG_ADDR      0x00000000 //Memory block0 sector 0 - address of general configuration
 #define FLASH_AREA_ADDR        0x00001001 //Memory block0 sector 1 - start address of watering areas configuration
 #define FLASH_READINGS_ADDR    0x01000001 //Memory block1 - start address of stored data from ADC readings
 
+/*
+ * Definitions for default configurations
+ */
 #define N_AREA 2  //default numumber of watering areas
 #define N_SENS 3  //default numumber of moisture sensors
 #define N_PUMP 2  //default numumber of watering pumps
 #define N_SOV  2  //default numumber of solenoid valves
 #define WATERING_TIME 1  //default watering time (minutes)
 #define MEAS_INTERVAL 10 //default interval for ADC readings (minutes)
+#define MAX_N_SENS 10
+#define MAX_N_SOV  5
+
+/*
+ * Definition of control bytes for SPI communication with ESP8266
+ */
+#define ESP_GET_CONF 0xAA //get general configuration data
+#define ESP_SET_CONF 0xAB
+#define ESP_GET_AREA 0xBA //get area configuration data
+#define ESP_SET_AREA 0xBB
+#define ESP_GET_DATA 0xCA //get measurements data
+#define ESP_CLEAR_DATA 0xCB
+
+#define ESP_STOP_CONTROL_TASK    0xDA //suspend control task
+#define ESP_RESUME_CONTROL_TASK  0xDB //resume control task
+
+
+
+void DMATransferComplete(DMA_HandleTypeDef *hdma);
 
 /*
  * Structure with relevant configurations to be stored in external flash and loaded on startup
- * Default initialization writes 0bxx0110010 to the reserved bits
+ * Default initialization writes FLASH_DEF_INIT to defaultInit
  * This is a criteria for checking if the memory already has the the default data written into it
  */
 
-
-typedef struct status{
-	uint8_t reserved0:1;
-	uint8_t reserved1:1;
-	uint8_t reserved2:1;
-	uint8_t reserved3:1;
-	uint8_t reserved4:1;
-	uint8_t reserved5:1;
-	uint8_t closedLoop:1;
-	uint8_t userInit:1;
-} status_t;
 typedef struct generalConfig{
-	status_t status;
+	uint32_t lastWrittenFlashAddr; //last address where readings from sensors was written
+	uint16_t defaultInit;
+	uint16_t measInt; //interval for ADC readings (minutes)
+	uint8_t userInit;
+	uint8_t closedLoop;
 	uint8_t nArea;   //number of watering areas
 	uint8_t nSens;  //number of moisture sensors
 	uint8_t nPump;  //number of water pumps
 	uint8_t nSov;   //number of solenoid valves
-	uint32_t lastWrittenFlashAddr; //last address where readings from sensors was written
-	uint16_t measInt; //interval for ADC readings (minutes)
-}generalConfig_t;
+	uint8_t dummy; //for padding purposes
+	uint8_t dummydummy; //for padding purposes
+}gConf_t;
 
 /*
  * Structure defining relevant parameters for each watering area
@@ -91,15 +112,24 @@ typedef struct generalConfig{
  */
 
 typedef struct wArea{
-	uint8_t sensID[50]; //ids of associated sensors in the watering area
-	uint8_t sovID[25];  //ids of associated solenoid valves in the watering area
-	uint8_t pumpID;      //id of the pump watering this particular area
+	uint8_t sensID[MAX_N_SENS]; //ids of associated sensors in the watering area
+	uint8_t sovID[MAX_N_SOV];  //ids of associated solenoid valves in the watering area
 	uint16_t wTime;      //watering time for this area
 	uint16_t threshold;  //threshold for closed loop watering control
+	uint8_t pumpID;      //id of the pump watering this particular area
 }wArea_t;
 
+/*
+ * Structure defining the measurement type, contains the id of the sensor and the measured value in mV
+ */
+
+typedef struct moistMeasurement{
+	uint8_t id;
+	uint16_t reading;
+}mMeas_t;
+
 //general configuration structures
-generalConfig_t monitorConf;
+gConf_t monitorConf;
 wArea_t waterArea;
 /* USER CODE END ET */
 
