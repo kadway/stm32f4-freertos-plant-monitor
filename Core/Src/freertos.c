@@ -54,6 +54,7 @@ osThreadId myTask02Handle;
 osMessageQId spiEspQueueHandle;
 osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
+osSemaphoreId adcSemphHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -88,16 +89,17 @@ return 0;
 /* USER CODE END 1 */
 
 /* USER CODE BEGIN 4 */
-__weak void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 {
    /* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */
+	printf("WARNING: Stack overflow!\nTask name: %s\nTask handle: %lu\n", pcTaskName, (uint32_t) xTask);
 }
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN 5 */
-__weak void vApplicationMallocFailedHook(void)
+void vApplicationMallocFailedHook(void)
 {
    /* vApplicationMallocFailedHook() will only be called if
    configUSE_MALLOC_FAILED_HOOK is set to 1 in FreeRTOSConfig.h. It is a hook
@@ -109,6 +111,7 @@ __weak void vApplicationMallocFailedHook(void)
    FreeRTOSConfig.h, and the xPortGetFreeHeapSize() API function can be used
    to query the size of free heap space that remains (although it does not
    provide information on how the remaining heap might be fragmented). */
+	printf("WARNING: vApplicationMallocFailedHook got called!\n");
 }
 /* USER CODE END 5 */
 
@@ -144,7 +147,8 @@ void MX_FREERTOS_Init(void) {
   osSemaphoreDef(spiEspSemph);
   spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
+  osSemaphoreDef(adcSemph);
+  adcSemphHandle = osSemaphoreCreate(osSemaphore(adcSemph), 1);
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -163,11 +167,11 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
 
-  osThreadDef(spiEspComT, spiEspComTask, osPriorityNormal, 0, 300);
+  osThreadDef(spiEspComT, spiEspComTask, osPriorityNormal, 0, 500);
   spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
   /* definition and creation of myTask02 */
-  osThreadDef(myTask02, StartTask02, osPriorityIdle, 0, 300);
+  osThreadDef(myTask02, StartTask02, osPriorityNormal, 0, 500);
   myTask02Handle = osThreadCreate(osThread(myTask02), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -175,14 +179,14 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_THREADS */
 
 }
-void DMATransferComplete(DMA_HandleTypeDef *hdma){
-	printf("txrx complete\n");
-	osSemaphoreRelease (spiEspSemphHandle);
-
-}
-void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi){
-
-}
+//void DMATransferComplete(DMA_HandleTypeDef *hdma){
+//	printf("txrx complete\n");
+//	osSemaphoreRelease (spiEspSemphHandle);
+//
+//}
+//void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi){
+//
+//}
 
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -251,6 +255,23 @@ void spiEspComTask(void const * argument)
 	}
 }
 
+//void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc){
+//#if (PRINTF_DEBUG == 1)
+//	printf("Adc conversion half complete callback.\n");
+//#endif
+//}
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
+#if (PRINTF_DEBUG == 1)
+	printf("Adc conversion complete callback.\n");
+#endif
+
+	osSemaphoreRelease (adcSemphHandle);
+}
+void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc){
+#if (PRINTF_DEBUG == 1)
+	printf("Adc error %d.\n", (int)hadc->ErrorCode);
+#endif
+}
 /* USER CODE BEGIN Header_StartTask02 */
 /**
 * @brief Function implementing the myTask02 thread.
@@ -261,19 +282,23 @@ void spiEspComTask(void const * argument)
 void StartTask02(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
-	  //uint8_t i =0;
-	  /*for(i=0;i<N_AREA;i++){
-		  W25qxx_ReadSector((uint8_t*)&waterArea,FLASH_READINGS_ADDR,i*sizeof(waterArea),sizeof(waterArea));
-		  printf("Found waterArea %d in flash\r\n", waterArea.pumpID);
-		  osDelay(1000);
-	  }*/
-
+  uint16_t data [15];
+  HAL_StatusTypeDef result;
+  uint8_t i;
+  osSemaphoreWait (adcSemphHandle, osWaitForever);
 	  for(;;)
 	  {
-		 // sprintf((char*)&buffer, "log2:Sent 0x%X to Master  Got 0x%X from Master\n", ackSlave, command);
-		 // HAL_UART_Transmit(&huart1, &buffer[0], sizeof(init_message),800);
+		  result = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&data, sizeof(data)/sizeof(uint16_t));
+		  osSemaphoreWait (adcSemphHandle, osWaitForever);
+		  HAL_ADC_Stop_DMA(&hadc1);
+#if (PRINTF_DEBUG == 1)
+		  //printf("Adc conversion finished.\n Result: %d \n", result);
+		  for(i=0; i<sizeof(data)/sizeof(uint16_t); i++){
+			  printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)data[i] * 3300) / 4096));
+		  }
+#endif
 
-	    osDelay(5000);
+		  osDelay(1000);
 	  }
   /* USER CODE END StartTask02 */
 }

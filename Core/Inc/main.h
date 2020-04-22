@@ -28,11 +28,13 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include "spi.h"
-#include "usart.h"
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
+#include "stm32f4xx_hal.h"
+#include "spi.h"
+#include "adc.h"
+#include "usart.h"
 #include "cmsis_os.h"
 #include "w25qxx.h"
 
@@ -40,6 +42,7 @@ extern osThreadId spiEspComTaskHandle;
 extern osThreadId myTask02Handle;
 extern osSemaphoreId spiEspSemphTXHandle;
 extern osSemaphoreId spiEspSemphHandle;
+extern osSemaphoreId adcSemphHandle;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
