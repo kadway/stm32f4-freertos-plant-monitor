@@ -207,7 +207,9 @@ void spiEspComTask(void const * argument)
 	osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
 	for(;;){
-
+#if (PRINTF_DEBUG == 1)
+			printf("Spi loop..\n");
+#endif
 		/* Send slave Ack */
 		HAL_SPI_TransmitReceive_DMA(&hspi2, &ackSlave, &command, sizeof(uint8_t));
 		osSemaphoreWait (spiEspSemphHandle, osWaitForever);
@@ -219,6 +221,9 @@ void spiEspComTask(void const * argument)
 			W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf)/sizeof(uint8_t));
 			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&monitorConf, (uint8_t*)&dummygConf, sizeof(monitorConf)/sizeof(uint8_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
+#if (PRINTF_DEBUG == 1)
+				printf("Sent Conf data to ESP\n");
+#endif
 			break;
 
 		case ESP_GET_AREA:
@@ -234,6 +239,9 @@ void spiEspComTask(void const * argument)
 					HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*) &waterArea,(uint8_t*) &dummywArea, sizeof(waterArea)/sizeof(uint8_t));
 					osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 				}
+#if (PRINTF_DEBUG == 1)
+					printf("Sent Area data to ESP\n");
+#endif
 			}
 			break;
 		default:

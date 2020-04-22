@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "adc.h"
 #include "dma.h"
 #include "spi.h"
 #include "usart.h"
@@ -70,12 +71,13 @@ int _write(int file, char *data, int len)
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
-void extFlashInit(void);
+
 
 /* USER CODE BEGIN PFP */
+void extFlashInit(void);
+
 void extFlashInit(void){
 	uint16_t i=0;
-	uint16_t j=0;
 	uint16_t dataSize = 0;
 
 	W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
@@ -97,8 +99,10 @@ void extFlashInit(void){
 		W25qxx_EraseChip();
 		//W25qxx_EraseBlock(FLASH_CONFIG_ADDR);
 		W25qxx_WritePage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
-		printf("Default general configuration initialized to flash\r\n");
 
+#if (PRINTF_DEBUG == 1)
+		printf("w25qxx init - Default general configuration initialized to flash\r\n");
+#endif
 		//init default watering areas
 		dataSize = sizeof(waterArea)/sizeof(uint8_t);
 		waterArea.wTime = WATERING_TIME;
@@ -111,11 +115,16 @@ void extFlashInit(void){
 			waterArea.pumpID = i+1;
 			//save to external flash
 			W25qxx_WriteSector((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*(dataSize), dataSize);
-			printf("Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
+#if (PRINTF_DEBUG == 1)
+			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
+#endif
+
 		}
 	}
 	else{
-		printf("Configuration recoverd from flash\r\n");
+#if (PRINTF_DEBUG == 1)
+		printf("w25qxx init - Configuration recoverd from flash\r\n");
+#endif
 	}
 
 }
@@ -156,18 +165,26 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+#if (PRINTF_DEBUG == 1)
+  printf("System init.\n");
+#endif
   MX_DMA_Init();
   MX_SPI2_Init();
   MX_SPI1_Init();
-  HAL_DMA_RegisterCallback(&hdma_spi2_rx, HAL_DMA_XFER_CPLT_CB_ID, &DMATransferComplete);
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   W25qxx_Init();
   extFlashInit();
+  //HAL_DMA_RegisterCallback(&hdma_spi2_rx, HAL_DMA_XFER_CPLT_CB_ID, &DMATransferComplete);
+
+
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
-
+  MX_FREERTOS_Init(); 
+#if (PRINTF_DEBUG == 1)
+  printf("Start RTOS...\n");
+#endif
   /* Start scheduler */
   osKernelStart();
   

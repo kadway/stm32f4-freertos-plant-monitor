@@ -43,7 +43,7 @@ extern osSemaphoreId spiEspSemphHandle;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#define PRINTF_DEBUG 1
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
