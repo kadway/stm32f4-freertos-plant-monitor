@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under Ultimate Liberty license
-  * SLA0044, the "License"; You may not use this file except in compliance with
-  * the License. You may obtain a copy of the License at:
-  *                             www.st.com/SLA0044
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * File Name          : freertos.c
+ * Description        : Code for freertos applications
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under Ultimate Liberty license
+ * SLA0044, the "License"; You may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at:
+ *                             www.st.com/SLA0044
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -50,7 +50,7 @@
 
 /* USER CODE END Variables */
 osThreadId spiEspComTaskHandle;
-osThreadId myTask02Handle;
+osThreadId adcTaskHandle;
 osMessageQId spiEspQueueHandle;
 osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
@@ -58,11 +58,11 @@ osSemaphoreId adcSemphHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-   
+
 /* USER CODE END FunctionPrototypes */
 
 void spiEspComTask(void const * argument);
-void StartTask02(void const * argument);
+void adcConvTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -84,14 +84,14 @@ __weak void configureTimerForRunTimeStats(void)
 
 __weak unsigned long getRunTimeCounterValue(void)
 {
-return 0;
+	return 0;
 }
 /* USER CODE END 1 */
 
 /* USER CODE BEGIN 4 */
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 {
-   /* Run time stack overflow checking is performed if
+	/* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */
 	printf("WARNING: Stack overflow!\nTask name: %s\nTask handle: %lu\n", pcTaskName, (uint32_t) xTask);
@@ -101,7 +101,7 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 /* USER CODE BEGIN 5 */
 void vApplicationMallocFailedHook(void)
 {
-   /* vApplicationMallocFailedHook() will only be called if
+	/* vApplicationMallocFailedHook() will only be called if
    configUSE_MALLOC_FAILED_HOOK is set to 1 in FreeRTOSConfig.h. It is a hook
    function that will get called if a call to pvPortMalloc() fails.
    pvPortMalloc() is called internally by the kernel whenever a task, queue,
@@ -118,65 +118,65 @@ void vApplicationMallocFailedHook(void)
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
 static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
-  
+
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
-  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
-  *ppxIdleTaskStackBuffer = &xIdleStack[0];
-  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
-  /* place for user code */
+	*ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+	*ppxIdleTaskStackBuffer = &xIdleStack[0];
+	*pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+	/* place for user code */
 }                   
 /* USER CODE END GET_IDLE_TASK_MEMORY */
 
 /**
-  * @brief  FreeRTOS initialization
-  * @param  None
-  * @retval None
-  */
+ * @brief  FreeRTOS initialization
+ * @param  None
+ * @retval None
+ */
 void MX_FREERTOS_Init(void) {
-  /* USER CODE BEGIN Init */
-       
-  /* USER CODE END Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
+	/* USER CODE END Init */
 
-  /* Create the semaphores(s) */
-  /* definition and creation of myBinarySem01 */
-  osSemaphoreDef(spiEspSemph);
-  spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  osSemaphoreDef(adcSemph);
-  adcSemphHandle = osSemaphoreCreate(osSemaphore(adcSemph), 1);
-  /* USER CODE END RTOS_SEMAPHORES */
+	/* USER CODE BEGIN RTOS_MUTEX */
+	/* add mutexes, ... */
+	/* USER CODE END RTOS_MUTEX */
 
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
+	/* Create the semaphores(s) */
+	/* definition and creation of spiEspSemph */
+	osSemaphoreDef(spiEspSemph);
+	spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
+	/* USER CODE BEGIN RTOS_SEMAPHORES */
+	osSemaphoreDef(adcSemph);
+	adcSemphHandle = osSemaphoreCreate(osSemaphore(adcSemph), 1);
+	/* USER CODE END RTOS_SEMAPHORES */
 
-  /* Create the queue(s) */
-  /* definition and creation of SpiQueueEsp */
-  osMessageQDef(SpiEspQueue, 256, uint8_t);
-  spiEspQueueHandle = osMessageCreate(osMessageQ(SpiEspQueue), NULL);
+	/* USER CODE BEGIN RTOS_TIMERS */
+	/* start timers, add new ones, ... */
+	/* USER CODE END RTOS_TIMERS */
 
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
+	/* Create the queue(s) */
+	/* definition and creation of SpiQueueEsp */
+	osMessageQDef(SpiEspQueue, 256, uint8_t);
+	spiEspQueueHandle = osMessageCreate(osMessageQ(SpiEspQueue), NULL);
 
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
+	/* USER CODE BEGIN RTOS_QUEUES */
+	/* add queues, ... */
+	/* USER CODE END RTOS_QUEUES */
 
-  osThreadDef(spiEspComT, spiEspComTask, osPriorityNormal, 0, 500);
-  spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
+	/* Create the thread(s) */
+	/* definition and creation of spiEspComT */
 
-  /* definition and creation of myTask02 */
-  osThreadDef(myTask02, StartTask02, osPriorityNormal, 0, 500);
-  myTask02Handle = osThreadCreate(osThread(myTask02), NULL);
+	osThreadDef(spiEspComT, spiEspComTask, osPriorityNormal, 0, 300);
+	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
+	/* definition and creation of adcTask */
+	osThreadDef(adcTask, adcConvTask, osPriorityNormal, 0, 300);
+	adcTaskHandle = osThreadCreate(osThread(adcTask), NULL);
+
+	/* USER CODE BEGIN RTOS_THREADS */
+	/* add threads, ... */
+	/* USER CODE END RTOS_THREADS */
 
 }
 //void DMATransferComplete(DMA_HandleTypeDef *hdma){
@@ -189,13 +189,13 @@ void MX_FREERTOS_Init(void) {
 //}
 
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+
 /**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used 
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
+ * @brief  Function implementing the thread for handling spi commands from ESP8266
+ * @param  argument: Not used
+ * @retval None
+ */
+/* USER CODE END spiEspComTask */
 void spiEspComTask(void const * argument)
 {
 	uint8_t ackSlave = 0xCE;
@@ -212,7 +212,7 @@ void spiEspComTask(void const * argument)
 
 	for(;;){
 #if (PRINTF_DEBUG == 1)
-			printf("Spi loop..\n");
+		printf("Spi loop..\n");
 #endif
 		/* Send slave Ack */
 		HAL_SPI_TransmitReceive_DMA(&hspi2, &ackSlave, &command, sizeof(uint8_t));
@@ -226,7 +226,7 @@ void spiEspComTask(void const * argument)
 			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&monitorConf, (uint8_t*)&dummygConf, sizeof(monitorConf)/sizeof(uint8_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 #if (PRINTF_DEBUG == 1)
-				printf("Sent Conf data to ESP\n");
+			printf("Sent Conf data to ESP\n");
 #endif
 			break;
 
@@ -244,7 +244,7 @@ void spiEspComTask(void const * argument)
 					osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 				}
 #if (PRINTF_DEBUG == 1)
-					printf("Sent Area data to ESP\n");
+				printf("Sent Area data to ESP\n");
 #endif
 			}
 			break;
@@ -255,57 +255,107 @@ void spiEspComTask(void const * argument)
 	}
 }
 
-//void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc){
-//#if (PRINTF_DEBUG == 1)
-//	printf("Adc conversion half complete callback.\n");
-//#endif
-//}
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
-#if (PRINTF_DEBUG == 1)
-	printf("Adc conversion complete callback.\n");
-#endif
-
 	osSemaphoreRelease (adcSemphHandle);
 }
+
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc){
 #if (PRINTF_DEBUG == 1)
 	printf("Adc error %d.\n", (int)hadc->ErrorCode);
 #endif
 }
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the myTask02 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void const * argument)
-{
-  /* USER CODE BEGIN StartTask02 */
-  uint16_t data [15];
-  HAL_StatusTypeDef result;
-  uint8_t i;
-  osSemaphoreWait (adcSemphHandle, osWaitForever);
-	  for(;;)
-	  {
-		  result = HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&data, sizeof(data)/sizeof(uint16_t));
-		  osSemaphoreWait (adcSemphHandle, osWaitForever);
-		  HAL_ADC_Stop_DMA(&hadc1);
-#if (PRINTF_DEBUG == 1)
-		  //printf("Adc conversion finished.\n Result: %d \n", result);
-		  for(i=0; i<sizeof(data)/sizeof(uint16_t); i++){
-			  printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)data[i] * 3300) / 4096));
-		  }
-#endif
 
-		  osDelay(1000);
-	  }
-  /* USER CODE END StartTask02 */
+
+/**
+ * @brief Function implementing the adcConvTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+
+void adcConvTask(void const * argument)
+{
+	/* USER CODE BEGIN StartTask02 */
+	uint16_t adcData [N_ADC];
+	uint8_t i;
+	uint32_t time = 1;
+	uint8_t offset = 0;
+	//  uint8_t unlocked = 0;
+	/*Must take semaphore the first time... */
+	osSemaphoreWait (adcSemphHandle, osWaitForever);
+
+	for(;;)
+	{
+		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adcData, sizeof(adcData)/sizeof(uint16_t));
+		osSemaphoreWait (adcSemphHandle, osWaitForever);
+		HAL_ADC_Stop_DMA(&hadc1);
+
+		//#if (PRINTF_DEBUG == 1)
+		//for(i=0; i<N_ADC; i++){
+		//  printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)data[i] * 3300) / 4096));
+		//  }
+		//#endif
+		//to do: get time from RTC
+		lastAdcConv.time = time;
+
+		//fill in conversion values in data structure and store it in external flash
+		//save up only until the number of used sensors
+		for(i=0; i<monitorConf.nSens; i++){
+			//id not really necessary!?
+			lastAdcConv.meas[i].id=i;
+			lastAdcConv.meas[i].reading = adcData[i];
+		}
+
+		//to do:delete after adding RTC time
+		time += 1;
+
+		assert_param(sizeof(lastAdcConv) <= w25qxx.PageSize);
+		W25qxx_WritePage((uint8_t*)&lastAdcConv, monitorConf.lastFlashPageNum, offset, sizeof(lastAdcConv));
+
+		if(offset + sizeof(mMeasTime_t) >= w25qxx.PageSize){
+			monitorConf.lastFlashPageNum += 1;
+			// check if reached end of memory, if so start writing from FLASH_READINGS_ADDR
+			if(monitorConf.lastFlashPageNum >= w25qxx.PageCount){
+				monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
+				//nlocked = 1;
+			}
+			offset = 0;
+		}
+		else{
+			offset += sizeof(lastAdcConv);
+		}
+
+		osDelay((uint32_t)monitorConf.adcConvTimeInterval);
+
+		//	#if (PRINTF_DEBUG == 1)
+		//		  if(unlocked){
+		//			  // test read
+		//			  monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
+		//			  offset = 0;
+		//			  do{
+		//				  W25qxx_ReadPage((uint8_t*)&lastAdcConv, monitorConf.lastFlashPageNum, offset, sizeof(lastAdcConv));
+		//				  printf("Page to READ: %d, Offset: %X,Time %lu:\n", monitorConf.lastFlashPageNum, offset,lastAdcConv.time);
+		//				  osDelay(100);
+		//				  if(offset + sizeof(mMeasTime_t) >= w25qxx.PageSize){
+		//					  monitorConf.lastFlashPageNum += 1;
+		//					  offset = 0;
+		//				  }
+		//				  else
+		//				  {
+		//					  offset += sizeof(lastAdcConv);
+		//				  }
+		//			  }while(monitorConf.lastFlashPageNum < lastMemAddr);
+		//			  monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
+		//			  unlocked = 0;
+		//		  }
+		//		  osDelay(1);
+		//	#endif
+	}
+	/* USER CODE END adcConvTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-     
+
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -53,12 +53,13 @@ extern osSemaphoreId adcSemphHandle;
 /* USER CODE BEGIN ET */
 
 /*
- * Definitions for external flash access
+ * Definitions for external flash memory access (w25q16)
  */
 #define FLASH_DEF_INIT         0xABCD     //Bytes for checking default initialization
-#define FLASH_CONFIG_ADDR      0x00000000 //Memory block0 sector 0 - address of general configuration
-#define FLASH_AREA_ADDR        0x00001001 //Memory block0 sector 1 - start address of watering areas configuration
-#define FLASH_READINGS_ADDR    0x01000001 //Memory block1 - start address of stored data from ADC readings
+#define FLASH_CONFIG_ADDR      0 //Memory block0 sector 0 for storing of general configuration
+#define FLASH_AREA_ADDR        16 //Memory block0 sector 1 - start address(page number) of watering areas configuration
+#define FLASH_READINGS_ADDR    16*16 //Memory block1 - start address(page number) of stored data from ADC readings
+
 
 /*
  * Definitions for default configurations
@@ -68,9 +69,10 @@ extern osSemaphoreId adcSemphHandle;
 #define N_PUMP 2  //default numumber of watering pumps
 #define N_SOV  2  //default numumber of solenoid valves
 #define WATERING_TIME 1  //default watering time (minutes)
-#define MEAS_INTERVAL 10 //default interval for ADC readings (minutes)
+#define MEAS_INTERVAL 1 /*min*/ *5/*sec*/ *1000/*ms*/ //default interval for ADC readings
 #define MAX_N_SENS 10
 #define MAX_N_SOV  5
+#define N_ADC  15
 
 /*
  * Definition of control bytes for SPI communication with ESP8266
@@ -96,17 +98,17 @@ void DMATransferComplete(DMA_HandleTypeDef *hdma);
  */
 
 typedef struct generalConfig{
-	uint32_t lastWrittenFlashAddr; //last address where readings from sensors was written
+	uint32_t lastFlashPageNum; //last page number where readings from sensors was written
+	uint32_t wateringTimeInterval; //for open loop
 	uint16_t defaultInit;
-	uint16_t measInt; //interval for ADC readings (minutes)
+	uint16_t adcConvTimeInterval; //interval for ADC readings (minutes)
 	uint8_t userInit;
 	uint8_t closedLoop;
 	uint8_t nArea;   //number of watering areas
 	uint8_t nSens;  //number of moisture sensors
 	uint8_t nPump;  //number of water pumps
 	uint8_t nSov;   //number of solenoid valves
-	uint8_t dummy; //for padding purposes
-	uint8_t dummydummy; //for padding purposes
+
 }gConf_t;
 
 /*
@@ -127,13 +129,21 @@ typedef struct wArea{
  */
 
 typedef struct moistMeasurement{
-	uint8_t id;
-	uint16_t reading;
+	uint16_t id;      //id of adc
+	uint16_t reading; //measured value in mV
 }mMeas_t;
+typedef struct moistMeasTime{
+	uint32_t time;      //date of measurements
+	//uint16_t ambient temperature from ds3232?
+	mMeas_t meas[N_ADC]; //N_ADC structures to alocate each convertion and adc id
+}mMeasTime_t;
 
 //general configuration structures
 gConf_t monitorConf;
 wArea_t waterArea;
+//global structure holding last adc values
+mMeasTime_t lastAdcConv;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
