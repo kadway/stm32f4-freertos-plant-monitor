@@ -381,11 +381,14 @@ void controlTask(void const * argument){
 				if(queueErr == osErrorParameter || queueErr == osErrorOS ){
 					/*if some error occured release the previous memory */
 					osMailFree(savedHandles.actQueueH[i], pointerToMail);
+#if (PRINTF_DEBUG == 1)
+					printf("Failed to put a message in queue\n");
+#endif
 				}
 #if (PRINTF_DEBUG == 1)
 				else{
-					printf("ControlTask i:%d put in queue area with pump id %d queue status: %X\n",i, waterArea.pumpID, (uint32_t) queueErr);
-					osDelay(1000);
+					printf("ControlTask, has area %d ->put in queue area with pump id %d queue status: %X\n", i+1, waterArea.pumpID, (uint32_t) queueErr);
+					osDelay(2000);
 				}
 #endif
 			}
@@ -402,21 +405,21 @@ void controlTask(void const * argument){
 
 void actuationTask(void const * argument){
 	osEvent mail;
-	osThreadId myID;
-	uint8_t i = 0;
+	uint32_t *myID;
+	//uint8_t i = 0;
 	wArea_t *pointerToMail;
+	osMailQId *pToQueueHandle = (osMailQId *)argument;
+
 	for(;;){
-		myID = osThreadGetId();
-		while(myID != savedHandles.actTaskH[i]){
-			i++;
-		}
-		printf("Actuation task with index %d runs\n", i);
-		mail = osMailGet(savedHandles.actQueueH[i], osWaitForever);
+		mail = osMailGet(*pToQueueHandle, osWaitForever);
 		pointerToMail = (wArea_t *) mail.value.p;
-		printf("Actuation task with index %d runs, and got mail with pumpID %d\n", i, pointerToMail->pumpID);
-		osMailFree(savedHandles.actQueueH[i], mail.value.p);
-		i = 0;
-		osDelay(5000);
+#if (PRINTF_DEBUG == 1)
+		myID = (uint32_t *)osThreadGetId();
+		printf("Actuation task with index %lu runs, and got mail with pumpID %d\n", *myID, pointerToMail->pumpID);
+#endif
+
+		osMailFree(*pToQueueHandle, mail.value.p);
+		osDelay(1000);
 	}
 }
 

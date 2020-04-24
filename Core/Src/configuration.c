@@ -72,12 +72,12 @@ void configInit(void){
 void initActuationTasks(void){
 	uint8_t pumpID, areaID;
 	uint8_t queueSize = 0;
-
-	//loop over the number of existing pumps
+	void const * pQueueHandle = NULL;
+	/*loop over the number of existing pumps*/
 	for (pumpID=0; pumpID<monitorConf.nPump; pumpID++){
 
 		for(areaID=0; areaID<monitorConf.nArea; areaID++){
-			//get necessary queue size by reading how many areas use the same pump
+			/*get necessary queue size by reading how many areas use the same pump*/
 			W25qxx_ReadPage((uint8_t*)&waterArea, FLASH_AREA_ADDR, areaID*sizeof(waterArea), sizeof(waterArea));
 			if(waterArea.pumpID == pumpID+1){
 				queueSize += 1;
@@ -91,13 +91,19 @@ void initActuationTasks(void){
 			osMailQDef(actuationQueue, queueSize, waterArea);
 			savedHandles.actQueueH[pumpID] = osMailCreate(osMailQ(actuationQueue), NULL);
 
-			queueSize = 0;
+			/*if memory allocation succedded pass the pointer on to the new task*/
+			if(savedHandles.actQueueH[pumpID] != NULL){
+				pQueueHandle = (void*) &savedHandles.actQueueH[pumpID];
+				queueSize = 0;
 
-			/* Creation of actuation task(s) */
-			osThreadDef(actTask, actuationTask, osPriorityAboveNormal, MAX_N_PUMP, 300);
-			savedHandles.actTaskH[pumpID]= osThreadCreate(osThread(actTask), NULL);
-			printf("Created Queue and task for pump %d\n", pumpID+1);
+				/* Creation of actuation task(s) */
+				osThreadDef(actTask, actuationTask, osPriorityAboveNormal, MAX_N_PUMP, 300);
+				savedHandles.actTaskH[pumpID]= osThreadCreate(osThread(actTask), pQueueHandle);
+#if (PRINTF_DEBUG == 1)
+				printf("Created Queue and task for pump %d\n", pumpID+1);
+				printf("monitorConf %d wArea %d\n", sizeof(gConf_t), sizeof(wArea_t));
+#endif
+			}
 		}
 	}
-
 }
