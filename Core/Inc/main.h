@@ -48,6 +48,7 @@ extern osThreadId controlTaskHandle;
 extern osSemaphoreId spiEspSemphTXHandle;
 extern osSemaphoreId spiEspSemphHandle;
 extern osSemaphoreId adcSemphHandle;
+extern void actuationTask(void const * argument);
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */

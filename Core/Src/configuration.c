@@ -8,10 +8,10 @@
 
 #include "configuration.h"
 #include "w25qxx.h"
-
+osMessageQId actuationTaskQueueHandle;
+osThreadId actuationTaskHandle;
 void configInit(void){
 	uint16_t i=0;
-	uint16_t dataSize = 0;
 
 	W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
 
@@ -39,18 +39,20 @@ void configInit(void){
 #endif
 
 		//init default watering areas
-		dataSize = sizeof(waterArea)/sizeof(uint8_t);
+
 		waterArea.wateringTime = WATERING_TIME;
 		waterArea.wateringInterval = WATERING_INTERVAL;
 		waterArea.threshold = 0;
 
+		//starting id zero means element is not existing and should be disconsidered
+		//ids to be initialized by user
 		memset(waterArea.sensID, 0, sizeof(waterArea.sensID));
 		memset(waterArea.sovID, 0, sizeof(waterArea.sovID));
 
 		for (i=0; i<N_AREA; i++){
-			waterArea.pumpID = i+1;
+			waterArea.pumpID = i+1; //starting id should be 1 so that zero is considered not existing
 			//save to external flash
-			W25qxx_WritePage((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*(dataSize), dataSize);
+			W25qxx_WritePage((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
 		}
 #if (PRINTF_DEBUG == 1)
 			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
@@ -62,10 +64,40 @@ void configInit(void){
 #if (PRINTF_DEBUG == 1)
 		printf("w25qxx init - Configuration recoverd from flash\r\n");
 #endif
+		initActuationTasks();
 	}
 
 }
 
 void initActuationTasks(void){
+	uint8_t pumpID, areaID;
+	uint8_t queueSize = 0;
+
+	//loop over the number of existing pumps
+	for (pumpID=0; pumpID<monitorConf.nPump; pumpID++){
+
+		for(areaID=0; areaID<monitorConf.nArea; areaID++){
+			//get necessary queue size by reading how many areas use the same pump
+			W25qxx_ReadPage((uint8_t*)&waterArea, FLASH_AREA_ADDR, areaID*sizeof(waterArea), sizeof(waterArea));
+			if(waterArea.pumpID == pumpID+1){
+				queueSize += 1;
+#if (PRINTF_DEBUG == 1)
+				printf("Water area %d uses pump %d. Queue size is now %d \n", areaID+1,pumpID+1, queueSize);
+#endif
+			}
+		}
+		if(queueSize > 0){
+			/* Create the queue(s) */
+			osMailQDef(actuationQueue, queueSize, waterArea);
+			savedHandles.actQueueH[pumpID] = osMailCreate(osMailQ(actuationQueue), NULL);
+
+			queueSize = 0;
+
+			/* Creation of actuation task(s) */
+			osThreadDef(actTask, actuationTask, osPriorityAboveNormal, MAX_N_PUMP, 300);
+			savedHandles.actTaskH[pumpID]= osThreadCreate(osThread(actTask), NULL);
+			printf("Created Queue and task for pump %d\n", pumpID+1);
+		}
+	}
 
 }

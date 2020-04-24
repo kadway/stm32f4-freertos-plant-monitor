@@ -52,7 +52,7 @@
 osThreadId spiEspComTaskHandle;
 osThreadId adcTaskHandle;
 osThreadId controlTaskHandle;
-osMessageQId actuationTaskQueueHandle;
+
 osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
 osSemaphoreId adcSemphHandle;
@@ -158,10 +158,7 @@ void MX_FREERTOS_Init(void) {
 	/* start timers, add new ones, ... */
 	/* USER CODE END RTOS_TIMERS */
 
-	/* Create the queue(s) */
-	/* definition and creation of SpiQueueEsp */
-	osMessageQDef(actuationTaskQueue, 256, uint8_t);
-	actuationTaskQueueHandle = osMessageCreate(osMessageQ(actuationTaskQueue), NULL);
+
 
 	/* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
@@ -169,8 +166,7 @@ void MX_FREERTOS_Init(void) {
 
 	/* Create the thread(s) */
 	/* definition and creation of spiEspComT */
-
-	osThreadDef(spiEspComT, spiEspComTask, osPriorityNormal, 0, 300);
+	osThreadDef(spiEspComT, spiEspComTask, osPriorityBelowNormal, 0, 300);
 	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
 	/* definition and creation of adcTask */
@@ -178,7 +174,7 @@ void MX_FREERTOS_Init(void) {
 	adcTaskHandle = osThreadCreate(osThread(adcTask), NULL);
 
 	/* definition and creation of contolTask */
-	osThreadDef(controlT, controlTask, osPriorityNormal, 0, 300);
+	osThreadDef(controlT, controlTask, osPriorityHigh, 0, 300);
 	controlTaskHandle = osThreadCreate(osThread(controlT), NULL);
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -366,12 +362,36 @@ void adcConvTask(void const * argument)
  */
 
 void controlTask(void const * argument){
-
+	uint8_t i;
+	void * pointerToMail = NULL;
+	osStatus queueErr;
 	for(;;){
+		/* read each area configured in memory */
+		for (i=0; i<monitorConf.nArea; i++){
+			W25qxx_ReadPage((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*sizeof(waterArea), sizeof(waterArea));
+			/*alocate memory to send the area in a mail queue to the actuation task */
+			pointerToMail = osMailAlloc(savedHandles.actQueueH[waterArea.pumpID-1], 100);
 
-		osDelay(10);
+			if(pointerToMail!=NULL){
+				/*if allocation is successful copy the area data into the new allocated memory */
+				memcpy(pointerToMail, &waterArea, sizeof(wArea_t));
+				/*put the data in the queue */
+				queueErr = osMailPut(savedHandles.actQueueH[waterArea.pumpID-1], pointerToMail);
+
+				if(queueErr == osErrorParameter || queueErr == osErrorOS ){
+					/*if some error occured release the previous memory */
+					osMailFree(savedHandles.actQueueH[i], pointerToMail);
+				}
+#if (PRINTF_DEBUG == 1)
+				else{
+					printf("ControlTask i:%d put in queue area with pump id %d queue status: %X\n",i, waterArea.pumpID, (uint32_t) queueErr);
+					osDelay(1000);
+				}
+#endif
+			}
+		}
+		osDelay(1000);
 	}
-
 }
 
 /**
@@ -381,12 +401,23 @@ void controlTask(void const * argument){
  */
 
 void actuationTask(void const * argument){
-
+	osEvent mail;
+	osThreadId myID;
+	uint8_t i = 0;
+	wArea_t *pointerToMail;
 	for(;;){
-
-		osDelay(10);
+		myID = osThreadGetId();
+		while(myID != savedHandles.actTaskH[i]){
+			i++;
+		}
+		printf("Actuation task with index %d runs\n", i);
+		mail = osMailGet(savedHandles.actQueueH[i], osWaitForever);
+		pointerToMail = (wArea_t *) mail.value.p;
+		printf("Actuation task with index %d runs, and got mail with pumpID %d\n", i, pointerToMail->pumpID);
+		osMailFree(savedHandles.actQueueH[i], mail.value.p);
+		i = 0;
+		osDelay(5000);
 	}
-
 }
 
 
