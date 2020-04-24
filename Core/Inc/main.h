@@ -41,6 +41,9 @@ extern "C" {
 #include "usart.h"
 #include "gpio.h"
 #include "configuration.h"
+#include "control.h"
+#include "measurement.h"
+#include "communication.h"
 
 extern osThreadId spiEspComTaskHandle;
 extern osThreadId adcTaskHandle;
@@ -48,7 +51,7 @@ extern osThreadId controlTaskHandle;
 extern osSemaphoreId spiEspSemphTXHandle;
 extern osSemaphoreId spiEspSemphHandle;
 extern osSemaphoreId adcSemphHandle;
-extern void actuationTask(void const * argument);
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
