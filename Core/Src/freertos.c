@@ -287,8 +287,12 @@ void adcConvTask(void const * argument)
 
 	for(;;)
 	{
+		//set output to give supply to sensors
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);
 		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adcData, sizeof(adcData)/sizeof(uint16_t));
 		osSemaphoreWait (adcSemphHandle, osWaitForever);
+		//set reset supply to sensors
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
 		HAL_ADC_Stop_DMA(&hadc1);
 
 		//#if (PRINTF_DEBUG == 1)
