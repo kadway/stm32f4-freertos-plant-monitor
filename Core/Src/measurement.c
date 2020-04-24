@@ -56,7 +56,7 @@ void adcConvTask(void const * argument)
 
 		//fill in conversion values in data structure and store it in external flash
 		//save up only until the number of used sensors
-		for(i=0; i<monitorConf.nSens; i++){
+		for(i=0; i<generalConf.nSens; i++){
 			//id not really necessary!?
 			lastAdcConv.meas[i].id=i;
 			lastAdcConv.meas[i].reading = adcData[i];
@@ -66,13 +66,13 @@ void adcConvTask(void const * argument)
 		time += 1;
 
 		assert_param(sizeof(lastAdcConv) <= w25qxx.PageSize);
-		W25qxx_WritePage((uint8_t*)&lastAdcConv, monitorConf.lastFlashPageNum, offset, sizeof(lastAdcConv));
+		W25qxx_WritePage((uint8_t*)&lastAdcConv, generalConf.lastFlashPageNum, offset, sizeof(lastAdcConv));
 
 		if(offset + sizeof(mMeasTime_t) >= w25qxx.PageSize){
-			monitorConf.lastFlashPageNum += 1;
+			generalConf.lastFlashPageNum += 1;
 			// check if reached end of memory, if so start writing from FLASH_READINGS_ADDR
-			if(monitorConf.lastFlashPageNum >= w25qxx.PageCount){
-				monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
+			if(generalConf.lastFlashPageNum >= w25qxx.PageCount){
+				generalConf.lastFlashPageNum = FLASH_READINGS_ADDR;
 				//nlocked = 1;
 			}
 			offset = 0;
@@ -81,7 +81,7 @@ void adcConvTask(void const * argument)
 			offset += sizeof(lastAdcConv);
 		}
 
-		osDelay((uint32_t)monitorConf.adcConvTimeInterval);
+		osDelay((uint32_t)generalConf.adcConvTimeInterval);
 
 		//	#if (PRINTF_DEBUG == 1)
 		//		  if(unlocked){

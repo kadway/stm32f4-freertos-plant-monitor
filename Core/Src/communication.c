@@ -40,8 +40,8 @@ void spiEspComTask(void const * argument)
 
 		case ESP_GET_CONF:
 			/* Send general configuration data */
-			W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf)/sizeof(uint8_t));
-			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&monitorConf, (uint8_t*)&dummygConf, sizeof(monitorConf)/sizeof(uint8_t));
+			W25qxx_ReadPage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(generalConf)/sizeof(uint8_t));
+			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&generalConf, (uint8_t*)&dummygConf, sizeof(generalConf)/sizeof(uint8_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 #if (PRINTF_DEBUG == 1)
 			printf("Sent Conf data to ESP\n");
@@ -50,15 +50,15 @@ void spiEspComTask(void const * argument)
 
 		case ESP_GET_AREA:
 			/* Send number of wArea elements */
-			nElm = monitorConf.nArea;
+			nElm = generalConf.nArea;
 			HAL_SPI_TransmitReceive_DMA(&hspi2, &nElm, &command, sizeof(uint8_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
 			if ( command == ackMaster){
 				/* send wArea data */
 				for (i=0; i<nElm; i++){
-					W25qxx_ReadSector((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*sizeof(waterArea), sizeof(waterArea)/sizeof(uint8_t));
-					HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*) &waterArea,(uint8_t*) &dummywArea, sizeof(waterArea)/sizeof(uint8_t));
+					W25qxx_ReadSector((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(areaConf), sizeof(areaConf)/sizeof(uint8_t));
+					HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*) &areaConf,(uint8_t*) &dummywArea, sizeof(areaConf)/sizeof(uint8_t));
 					osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 				}
 #if (PRINTF_DEBUG == 1)

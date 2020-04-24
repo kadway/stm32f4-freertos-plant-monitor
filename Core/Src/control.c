@@ -18,31 +18,44 @@ void controlTask(void const * argument){
 	uint8_t i;
 	void * pointerToMail = NULL;
 	osStatus queueErr;
+
 	for(;;){
-		/* read each area configured in memory */
-		for (i=0; i<monitorConf.nArea; i++){
-			W25qxx_ReadPage((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*sizeof(waterArea), sizeof(waterArea));
-			/*alocate memory to send the area in a mail queue to the actuation task */
-			pointerToMail = osMailAlloc(savedHandles.actQueueH[waterArea.pumpID-1], 100);
+		/* Read each area configured in memory */
+		for (i=0; i<generalConf.nArea; i++){
+			W25qxx_ReadPage((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(areaConf), sizeof(areaConf));
 
-			if(pointerToMail!=NULL){
-				/*if allocation is successful copy the area data into the new allocated memory */
-				memcpy(pointerToMail, &waterArea, sizeof(wArea_t));
-				/*put the data in the queue */
-				queueErr = osMailPut(savedHandles.actQueueH[waterArea.pumpID-1], pointerToMail);
+			/*Check if pumpID is valid. must be a number less than or equal to defined number of used pumps */
+			if( areaConf.pumpID <= generalConf.nPump){
+				/* Get a pointer to the a memory block previously alocated in configInit */
+				pointerToMail = osMailAlloc(savedHandles.actQueueH[areaConf.pumpID-1], 100);
 
-				if(queueErr == osErrorParameter || queueErr == osErrorOS ){
-					/*if some error occured release the previous memory */
-					osMailFree(savedHandles.actQueueH[i], pointerToMail);
+				if(pointerToMail!=NULL){
+					/* If allocation is successful copy the area data into the new allocated memory */
+					memcpy(pointerToMail, &areaConf, sizeof(wArea_t));
+					/*put the data in the queue */
+					queueErr = osMailPut(savedHandles.actQueueH[areaConf.pumpID-1], pointerToMail);
+
+					if(queueErr == osErrorParameter || queueErr == osErrorOS ){
+						/*if some error occured release the previous memory */
+						osMailFree(savedHandles.actQueueH[i], pointerToMail);
 #if (PRINTF_DEBUG == 1)
-					printf("Failed to put a message in queue\n");
+						printf("Failed to put a message in queue\n");
+						osDelay(2000);
+#endif
+					}
+#if (PRINTF_DEBUG == 1)
+					else{
+						printf("ControlTask, has area %d ->put in queue area with pump id %d queue status: %X\n", i+1, areaConf.pumpID, (uint32_t) queueErr);
+						osDelay(2000);
+					}
 #endif
 				}
 #if (PRINTF_DEBUG == 1)
 				else{
-					printf("ControlTask, has area %d ->put in queue area with pump id %d queue status: %X\n", i+1, waterArea.pumpID, (uint32_t) queueErr);
+					printf("NULL pointer when trying to get memory block previously alocated in configInit\nInvalid pumpID configured?!\n");
 					osDelay(2000);
 				}
+
 #endif
 			}
 		}
@@ -59,7 +72,6 @@ void controlTask(void const * argument){
 void actuationTask(void const * argument){
 	osEvent mail;
 	uint32_t *myID;
-	//uint8_t i = 0;
 	wArea_t *pointerToMail;
 	osMailQId *pToQueueHandle = (osMailQId *)argument;
 
