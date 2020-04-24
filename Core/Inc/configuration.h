@@ -76,7 +76,7 @@ typedef struct wArea{
 	uint32_t lastWateringtime;  //last time of watering
 	uint16_t threshold;  //threshold for closed loop watering control
 	uint8_t pumpID;      //id of the pump watering this particular area
-	uint8_t closedLoop; // to consider the threshold or not
+	uint8_t openLoop; // to consider the threshold or not
 }wArea_t;
 
 /*

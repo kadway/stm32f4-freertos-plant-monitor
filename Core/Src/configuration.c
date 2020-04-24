@@ -36,7 +36,7 @@ void configInit(void){
 		areaConf.wateringInterval = WATERING_INTERVAL;
 		areaConf.lastWateringtime = 0;
 		areaConf.threshold = 0;
-		areaConf.closedLoop = 0;
+		areaConf.openLoop = 1;
 		//starting id zero means element is not existing and should be disconsidered
 		//ids to be initialized by user
 		memset(areaConf.sensID, 0, sizeof(areaConf.sensID));
