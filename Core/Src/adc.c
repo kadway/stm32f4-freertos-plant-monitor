@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "adc.h"
+#include "configuration.h"
 
 /* USER CODE BEGIN 0 */
 

@@ -20,12 +20,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
-#include "adc.h"
-#include "dma.h"
-#include "spi.h"
-#include "usart.h"
-#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -74,62 +68,8 @@ void MX_FREERTOS_Init(void);
 
 
 /* USER CODE BEGIN PFP */
-void extFlashInit(void);
 
-void extFlashInit(void){
-	uint16_t i=0;
-	uint16_t dataSize = 0;
 
-	W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
-
-	if(monitorConf.defaultInit != FLASH_DEF_INIT){
-		//if(1){
-		// init general configurations
-		monitorConf.defaultInit=FLASH_DEF_INIT;
-		monitorConf.userInit = 0;
-		monitorConf.closedLoop = 0;
-		monitorConf.nArea = N_AREA;
-		monitorConf.nSens = N_SENS;
-		monitorConf.nPump = N_PUMP;
-		monitorConf.nSov = N_SOV;
-		monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
-		monitorConf.adcConvTimeInterval = MEAS_INTERVAL;
-
-		//save to external flash
-		W25qxx_EraseChip();
-		//W25qxx_EraseBlock(FLASH_CONFIG_ADDR);
-		W25qxx_WritePage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
-
-#if (PRINTF_DEBUG == 1)
-		printf("w25qxx init - Default general configuration initialized to flash\r\n");
-#endif
-
-		//init default watering areas
-		dataSize = sizeof(waterArea)/sizeof(uint8_t);
-		waterArea.wTime = WATERING_TIME;
-		waterArea.threshold = 0;
-
-		memset(waterArea.sensID, 0, sizeof(waterArea.sensID));
-		memset(waterArea.sovID, 0, sizeof(waterArea.sovID));
-
-		for (i=0; i<N_AREA; i++){
-			waterArea.pumpID = i+1;
-			//save to external flash
-			W25qxx_WritePage((uint8_t*)&waterArea, FLASH_AREA_ADDR, i*(dataSize), dataSize);
-		}
-#if (PRINTF_DEBUG == 1)
-			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
-			printf("\n ----monitor conf: -----\n");
-			W25qxx_ReadPage((uint8_t*)&monitorConf, FLASH_CONFIG_ADDR, 0, sizeof(monitorConf));
-#endif
-	}
-	else{
-#if (PRINTF_DEBUG == 1)
-		printf("w25qxx init - Configuration recoverd from flash\r\n");
-#endif
-	}
-
-}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -176,7 +116,7 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   W25qxx_Init();
-  extFlashInit();
+  configInit();
   //HAL_DMA_RegisterCallback(&hdma_spi2_rx, HAL_DMA_XFER_CPLT_CB_ID, &DMATransferComplete);
 
 

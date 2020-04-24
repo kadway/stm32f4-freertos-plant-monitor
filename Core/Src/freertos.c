@@ -51,7 +51,8 @@
 /* USER CODE END Variables */
 osThreadId spiEspComTaskHandle;
 osThreadId adcTaskHandle;
-osMessageQId spiEspQueueHandle;
+osThreadId controlTaskHandle;
+osMessageQId actuationTaskQueueHandle;
 osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
 osSemaphoreId adcSemphHandle;
@@ -63,6 +64,8 @@ osSemaphoreId adcSemphHandle;
 
 void spiEspComTask(void const * argument);
 void adcConvTask(void const * argument);
+void controlTask(void const * argument);
+void actuationTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -157,8 +160,8 @@ void MX_FREERTOS_Init(void) {
 
 	/* Create the queue(s) */
 	/* definition and creation of SpiQueueEsp */
-	osMessageQDef(SpiEspQueue, 256, uint8_t);
-	spiEspQueueHandle = osMessageCreate(osMessageQ(SpiEspQueue), NULL);
+	osMessageQDef(actuationTaskQueue, 256, uint8_t);
+	actuationTaskQueueHandle = osMessageCreate(osMessageQ(actuationTaskQueue), NULL);
 
 	/* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
@@ -174,6 +177,9 @@ void MX_FREERTOS_Init(void) {
 	osThreadDef(adcTask, adcConvTask, osPriorityNormal, 0, 300);
 	adcTaskHandle = osThreadCreate(osThread(adcTask), NULL);
 
+	/* definition and creation of contolTask */
+	osThreadDef(controlT, controlTask, osPriorityNormal, 0, 300);
+	controlTaskHandle = osThreadCreate(osThread(controlT), NULL);
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
 	/* USER CODE END RTOS_THREADS */
@@ -352,6 +358,37 @@ void adcConvTask(void const * argument)
 	}
 	/* USER CODE END adcConvTask */
 }
+
+/**
+ * @brief  Function implementing the thread that handles the control of the actuation tasks
+ * @param  argument: Not used
+ * @retval None
+ */
+
+void controlTask(void const * argument){
+
+	for(;;){
+
+		osDelay(10);
+	}
+
+}
+
+/**
+ * @brief  Function implementing the thread that handles watering for areas
+ * @param  argument: Not used
+ * @retval None
+ */
+
+void actuationTask(void const * argument){
+
+	for(;;){
+
+		osDelay(10);
+	}
+
+}
+
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
