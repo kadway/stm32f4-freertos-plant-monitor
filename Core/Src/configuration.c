@@ -10,6 +10,8 @@
 #include "w25qxx.h"
 osMessageQId actuationTaskQueueHandle;
 osThreadId actuationTaskHandle;
+
+
 void configInit(void){
 	uint16_t i=0;
 
@@ -43,13 +45,16 @@ void configInit(void){
 		memset(areaConf.sovID, 0, sizeof(areaConf.sovID));
 
 		for (i=0; i<N_AREA; i++){
-			areaConf.pumpID = i+1; //starting id should be 1 so that zero is considered not existing
+			areaConf.areaID = i+1;
+			areaConf.pumpID = i; //starting id should be 1 so that zero is considered not existing
 			W25qxx_WritePage((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
 		}
 #if (PRINTF_DEBUG == 1)
 			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
-			printf("\n ----monitor conf: -----\n");
-			W25qxx_ReadPage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
+			printf("Sizes of structures: generalConf %d areaConf %d\n", sizeof(gConf_t), sizeof(wArea_t));
+			osDelay(5000);
+			//printf("\n ----monitor conf: -----\n");
+			//W25qxx_ReadPage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 #endif
 	}
 	else{
@@ -93,7 +98,6 @@ void initActuationTasks(void){
 				savedHandles.actTaskH[pumpID]= osThreadCreate(osThread(actTask), pQueueHandle);
 #if (PRINTF_DEBUG == 1)
 				printf("Created Queue and task for pump %d\n", pumpID+1);
-				printf("generalConf %d areaConf %d\n", sizeof(gConf_t), sizeof(wArea_t));
 #endif
 			}
 		}

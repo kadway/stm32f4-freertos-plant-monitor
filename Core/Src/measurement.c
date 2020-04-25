@@ -58,8 +58,7 @@ void adcConvTask(void const * argument)
 		//save up only until the number of used sensors
 		for(i=0; i<generalConf.nSens; i++){
 			//id not really necessary!?
-			lastAdcConv.meas[i].id=i;
-			lastAdcConv.meas[i].reading = adcData[i];
+			lastAdcConv.meas[i] = adcData[i];
 		}
 
 		//to do:delete after adding RTC time

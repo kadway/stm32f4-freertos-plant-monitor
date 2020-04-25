@@ -21,10 +21,10 @@
 /*
  * Definitions for default configurations
  */
-#define N_AREA 8  //default numumber of watering areas
+#define N_AREA 5  //default numumber of watering areas
 #define N_SENS 15  //default numumber of moisture sensors
-#define N_PUMP 2  //default numumber of watering pumps
-#define N_SOV  8  //default numumber of solenoid valves
+#define N_PUMP 3  //default numumber of watering pumps
+#define N_SOV  5  //default numumber of solenoid valves
 #define MAX_N_PUMP 5 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles
 
 #define WATERING_TIME 5 *1000/*ms*/  //default watering time in ticks (milisecond)
@@ -74,26 +74,19 @@ typedef struct wArea{
 	uint32_t wateringTime;      //watering time
 	uint32_t wateringInterval;  //watering interval for open loop
 	uint32_t lastWateringtime;  //last time of watering
-	uint16_t threshold;  //threshold for closed loop watering control
-	uint8_t pumpID;      //id of the pump watering this particular area
-	uint8_t openLoop; // to consider the threshold or not
+	uint16_t threshold;         //threshold for closed loop watering control
+	uint8_t pumpID;             //id of the pump watering this particular area
+	uint8_t openLoop;           //to consider the threshold or not
+	uint8_t areaID;             //number for the area to be watered
 }wArea_t;
-
-/*
- * Structure defining the measurement type, contains the id of the sensor and the measured value in mV
- */
-typedef struct moistMeasurement{
-	uint16_t id;      //id of adc
-	uint16_t reading; //measured value in mV
-}mMeas_t;
 
 /*
  * Structure defining the number of measurements, contains a static array of mMeas_t and the time of adc conversions
  */
 typedef struct moistMeasTime{
-	uint32_t time;      //date of measurements
-	//uint16_t ambient temperature from ds3232?
-	mMeas_t meas[N_ADC]; //N_ADC structures to alocate each convertion and adc id
+	uint32_t time;        //date of measurements
+	uint16_t temperature; //ambient temperature from ds3232
+	uint16_t meas[N_ADC]; //N_ADC structures to alocate each convertion and adc id
 }mMeasTime_t;
 
 typedef struct actuationTaskHandles{
