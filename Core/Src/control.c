@@ -14,9 +14,7 @@
 #include "control.h"
 #include "main.h"
 
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize ){
 
-}
 
 void controlTask(void const * argument){
 	uint8_t i, id;
@@ -25,9 +23,11 @@ void controlTask(void const * argument){
 	uint32_t elapsedTime;
 	uint32_t average;
 	uint16_t count;
+
 	for(;;){
 		/* Read each area configured in memory */
 		for (i=0; i<generalConf.nArea; i++){
+
 			W25qxx_ReadPage((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(areaConf), sizeof(areaConf));
 
 			/*Check if pumpID is valid. must be a number less than or equal to defined number of used pumps */
@@ -37,7 +37,7 @@ void controlTask(void const * argument){
 					/* In open loop just check if the watering interval has passed */
 					elapsedTime=HAL_GetTick()- areaConf.lastWateringtime >= areaConf.wateringInterval;
 #if (PRINTF_DEBUG == 1)
-					printf("Time elapsed for area %lu\n", areaConf.areaID);
+					printf("Time elapsed for area %d\n", areaConf.areaID);
 #endif
 				}
 				else{
@@ -54,17 +54,17 @@ void controlTask(void const * argument){
 				if((areaConf.openLoop && elapsedTime>=areaConf.wateringInterval) || average >= areaConf.threshold){
 
 					/* Get a pointer to the a memory block previously alocated in configInit */
-					pointerToMail = osMailAlloc(savedHandles.actQueueH[areaConf.pumpID-1], 100);
+					pointerToMail = osMailAlloc(savedHandles[areaConf.pumpID-1].queueH, 100);
 
 					if(pointerToMail!=NULL){
 						/* If allocation is successful copy the area data into the new allocated memory */
 						memcpy(pointerToMail, &areaConf, sizeof(wArea_t));
 						/*put the data in the queue */
-						queueErr = osMailPut(savedHandles.actQueueH[areaConf.pumpID-1], pointerToMail);
+						queueErr = osMailPut(savedHandles[areaConf.pumpID-1].queueH, pointerToMail);
 
 						if(queueErr == osErrorParameter || queueErr == osErrorOS ){
 							/*if some error occured release the previous memory */
-							osMailFree(savedHandles.actQueueH[i], pointerToMail);
+							osMailFree(savedHandles[i].queueH, pointerToMail);
 #if (PRINTF_DEBUG == 1)
 							printf("Failed to put a message in queue\n");
 							osDelay(2000);
@@ -105,43 +105,49 @@ void actuationTask(void const * argument){
 	osThreadId myID;
 	uint32_t *id;
 	wArea_t *pointerToMail;
-	osMailQId *pToQueueHandle = (osMailQId *)argument;
-	osTimerId waterTimerHandle;
+	actTaskQueueH_t *pHandle = (actTaskQueueH_t *)argument;
 
 	myID = osThreadGetId();
 	id = (uint32_t*) myID;
-	osTimerDef(wateringTimer, waterTimerCallback);
-	waterTimerHandle = osTimerCreate(osTimer(wateringTimer), osTimerOnce, myID);
+
 
 	for(;;){
-		mail = osMailGet(*pToQueueHandle, osWaitForever);
+		mail = osMailGet(pHandle->queueH, osWaitForever);
 		pointerToMail = (wArea_t *) mail.value.p;
 
 #if (PRINTF_DEBUG == 1)
 		printf("Actuation task with index %lu runs, and got mail with pumpID %d\n", *id, pointerToMail->pumpID);
 #endif
 
-		osTimerStart(waterTimerHandle, pointerToMail->wateringTime);
+		osTimerStart(pHandle->timerH, pointerToMail->wateringTime);
 
 #if (PRINTF_DEBUG == 1)
 		printf("Actuation task with index %lu runs, timer for %lu seconds started\n", *id, pointerToMail->wateringTime);
 #endif
-		osThreadSuspend(myID);
+		osThreadSuspend(pHandle->taskH);
 
 #if (PRINTF_DEBUG == 1)
 		printf("Actuation task with index %lu resumes\n", *id);
 #endif
-		osMailFree(*pToQueueHandle, mail.value.p);
+		osMailFree(pHandle->queueH, mail.value.p);
 		osDelay(1000);
 	}
 }
 
-void waterTimerCallback(void const * argument){
+void pumpTimerCallback(void const * argument){
 	uint32_t *id;
-	id = (uint32_t*)argument;
+	osTimerId myID = (osTimerId) argument;
+	uint32_t i = 0;
+
+	while(myID != savedHandles[i].timerH){
+		i++;
+	}
+
+	id = (uint32_t*) myID;
 
 #if (PRINTF_DEBUG == 1)
-		printf("Timer callback resumes task with id %lu\n", *id);
+		printf("Timer id %lu resumes task\n", *id );
 #endif
-	osThreadResume((osThreadId) argument);
+		osDelay(1000);
+	osThreadResume(savedHandles[i].taskH);
 }

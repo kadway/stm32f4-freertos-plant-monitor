@@ -46,7 +46,7 @@ void configInit(void){
 
 		for (i=0; i<N_AREA; i++){
 			areaConf.areaID = i+1;
-			areaConf.pumpID = i; //starting id should be 1 so that zero is considered not existing
+			areaConf.pumpID = i+1; //starting id should be 1 so that zero is considered not existing
 			W25qxx_WritePage((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
 		}
 #if (PRINTF_DEBUG == 1)
@@ -69,8 +69,9 @@ void configInit(void){
 void initActuationTasks(void){
 	uint8_t pumpID, areaID;
 	uint8_t queueSize = 0;
-	void const * pQueueHandle = NULL;
+	void const * pHandle = NULL;
 	/* Loop over the number of existing pumps */
+
 	for (pumpID=0; pumpID<generalConf.nPump; pumpID++){
 
 		for(areaID=0; areaID<generalConf.nArea; areaID++){
@@ -86,18 +87,24 @@ void initActuationTasks(void){
 		if(queueSize > 0){
 			/* Create the queue(s) */
 			osMailQDef(actuationQueue, queueSize, areaConf);
-			savedHandles.actQueueH[pumpID] = osMailCreate(osMailQ(actuationQueue), NULL);
+			savedHandles[pumpID].queueH = osMailCreate(osMailQ(actuationQueue), NULL);
 
-			/* If memory allocation succedded pass the pointer on to the new task */
-			if(savedHandles.actQueueH[pumpID] != NULL){
-				pQueueHandle = (void*) &savedHandles.actQueueH[pumpID];
+			/* If memory allocation succedded pass the pointer on to the new task and timer */
+			if(savedHandles[pumpID].queueH != NULL){
+				pHandle = (void*) &savedHandles[pumpID];
 				queueSize = 0;
 
 				/* Creation of actuation task(s) */
 				osThreadDef(actTask, actuationTask, osPriorityAboveNormal, MAX_N_PUMP, 300);
-				savedHandles.actTaskH[pumpID]= osThreadCreate(osThread(actTask), pQueueHandle);
+				savedHandles[pumpID].taskH = osThreadCreate(osThread(actTask), pHandle);
 #if (PRINTF_DEBUG == 1)
 				printf("Created Queue and task for pump %d\n", pumpID+1);
+#endif
+				osTimerDef(wateringTimer, pumpTimerCallback);
+				savedHandles[pumpID].timerH = osTimerCreate(osTimer(wateringTimer), osTimerOnce, NULL);
+
+#if (PRINTF_DEBUG == 1)
+				printf("Created Timer for pump %d\n", pumpID+1);
 #endif
 			}
 		}

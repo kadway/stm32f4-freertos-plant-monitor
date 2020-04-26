@@ -11,4 +11,4 @@
 
 void controlTask(void const * argument);
 void actuationTask(void const * argument);
-void waterTimerCallback(void const * argument);
+void pumpTimerCallback(void const * argument);

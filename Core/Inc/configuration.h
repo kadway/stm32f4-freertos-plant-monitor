@@ -27,7 +27,7 @@
 #define N_SOV  5  //default numumber of solenoid valves
 #define MAX_N_PUMP 5 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles
 
-#define WATERING_TIME 5 *1000/*ms*/  //default watering time in ticks (milisecond)
+#define WATERING_TIME 1 *1000/*ms*/  //default watering time in ticks (milisecond)
 #define WATERING_INTERVAL 45*1000/*ms*/ //default interval for watering in ticks (milisecond)
 #define MEAS_INTERVAL 30*1000/*ms*/ //default interval for ADC readings in ticks (milisecond)
 #define MAX_N_SENS 10
@@ -90,8 +90,9 @@ typedef struct moistMeasTime{
 }mMeasTime_t;
 
 typedef struct actuationTaskHandles{
-	osMailQId actQueueH[MAX_N_PUMP];
-	osThreadId actTaskH[MAX_N_PUMP];
+	osMailQId queueH;
+	osThreadId taskH;
+	osTimerId timerH;
 }actTaskQueueH_t;
 
 /*general configuration structures*/
@@ -102,6 +103,6 @@ wArea_t areaConf;
 mMeasTime_t lastAdcConv;
 
 /*global structure holding the handles for dynamically allocated tasks and queues */
-actTaskQueueH_t savedHandles;
+actTaskQueueH_t savedHandles[MAX_N_PUMP];
 
 #endif /* INC_CONFIGURATION_H_ */
