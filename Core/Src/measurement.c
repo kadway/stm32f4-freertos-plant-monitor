@@ -65,19 +65,20 @@ void adcConvTask(void const * argument)
 		time += 1;
 
 		assert_param(sizeof(lastAdcConv) <= w25qxx.PageSize);
-		W25qxx_WritePage((uint8_t*)&lastAdcConv, generalConf.lastFlashPageNum, offset, sizeof(lastAdcConv));
+		W25qxx_WritePage((uint8_t*)&lastAdcConv, generalConf.lastFlashPageNumAdc, offset, sizeof(lastAdcConv));
 
 		if(offset + sizeof(mMeasTime_t) >= w25qxx.PageSize){
-			generalConf.lastFlashPageNum += 1;
+			generalConf.lastFlashPageNumAdc += 1;
 			// check if reached end of memory, if so start writing from FLASH_READINGS_ADDR
-			if(generalConf.lastFlashPageNum >= w25qxx.PageCount){
-				generalConf.lastFlashPageNum = FLASH_READINGS_ADDR;
+			if(generalConf.lastFlashPageNumAdc >= w25qxx.PageCount){
+				generalConf.lastFlashPageNumAdc = FLASH_ADC_LOG_ADDR;
 				//nlocked = 1;
 			}
 			offset = 0;
 		}
 		else{
 			offset += sizeof(lastAdcConv);
+			generalConf.pageOffsetAdc = offset;
 		}
 
 		osDelay((uint32_t)generalConf.adcConvTimeInterval);

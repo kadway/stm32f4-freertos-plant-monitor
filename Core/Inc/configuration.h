@@ -16,19 +16,20 @@
 #define FLASH_DEF_INIT_CODE    0xABCD     //Bytes for checking default initialization
 #define FLASH_CONFIG_ADDR      0 //Memory block0 sector 0 for storing of general configuration
 #define FLASH_AREA_ADDR        16 //Memory block0 sector 1 - start address(page number) of watering areas configuration
-#define FLASH_READINGS_ADDR    16*16 //Memory block1 - start address(page number) of stored data from ADC readings
+#define FLASH_ADC_LOG_ADDR     16*16    //Memory block1 - start address(page number) of stored data from ADC readings
+#define FLASH_ACT_LOG_ADDR     16*16*30 //Memory block30 - start address(page number) of stored data from ADC readings
 
 /*
  * Definitions for default configurations
  */
-#define N_AREA 5  //default numumber of watering areas
+#define N_AREA 1  //default numumber of watering areas
 #define N_SENS 15  //default numumber of moisture sensors
-#define N_PUMP 3  //default numumber of watering pumps
+#define N_PUMP 1  //default numumber of watering pumps
 #define N_SOV  5  //default numumber of solenoid valves
 #define MAX_N_PUMP 5 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles
 
 #define WATERING_TIME 1 *1000/*ms*/  //default watering time in ticks (milisecond)
-#define WATERING_INTERVAL 45*1000/*ms*/ //default interval for watering in ticks (milisecond)
+#define WATERING_INTERVAL 5*1000/*ms*/ //default interval for watering in ticks (milisecond)
 #define MEAS_INTERVAL 30*1000/*ms*/ //default interval for ADC readings in ticks (milisecond)
 #define MAX_N_SENS 10
 #define MAX_N_SOV  5
@@ -47,17 +48,15 @@
 #define ESP_STOP_CONTROL_TASK    0xDA //suspend control task
 #define ESP_RESUME_CONTROL_TASK  0xDB //resume control task
 
-/*
- * Function prototypes
- */
 
-void configInit(void);
-void initActuationTasks(void);
 
 typedef struct generalConfig{
-	uint32_t lastFlashPageNum;      //last page number where readings from sensors was written
 	uint16_t initCode;              //Bytes for checking default initialization
 	uint16_t adcConvTimeInterval;   //interval for ADC readings (minutes)
+	uint16_t lastFlashPageNumAdc;   //last page number where readings from sensors was written
+	uint16_t lastFlashPageNumAct;   //last page number where actuation log was written
+	uint8_t pageOffsetAdc;          //page offset in bytes for writing to external flash memory
+	uint8_t pageOffsetAct;          //page offset in bytes for writing to external flash memory
 	uint8_t nArea;  //number of watering areas
 	uint8_t nSens;  //number of moisture sensors
 	uint8_t nPump;  //number of water pumps
@@ -71,7 +70,7 @@ typedef struct generalConfig{
 typedef struct wArea{
 	uint8_t sensID[MAX_N_SENS]; //ids of associated sensors in the watering area
 	uint8_t sovID[MAX_N_SOV];   //ids of associated solenoid valves in the watering area
-	uint32_t wateringTime;      //watering time
+	uint32_t wateringDuration;  //watering duration
 	uint32_t wateringInterval;  //watering interval for open loop
 	uint32_t lastWateringtime;  //last time of watering
 	uint16_t threshold;         //threshold for closed loop watering control
@@ -89,20 +88,49 @@ typedef struct moistMeasTime{
 	uint16_t meas[N_ADC]; //N_ADC structures to alocate each convertion and adc id
 }mMeasTime_t;
 
+typedef struct wateringTime{
+	uint32_t time;       //time of watering
+	uint32_t duration;   //watering duration
+	uint8_t  areaID;     //number for the area to be watered
+}wTime_t;
+
 typedef struct actuationTaskHandles{
 	osMailQId queueH;
 	osThreadId taskH;
 	osTimerId timerH;
 }actTaskQueueH_t;
 
+typedef enum flashDType {
+	gConfData = 0,
+	wAreaData,
+	mMeasTimeData,
+	wTimeData
+}flashDataType;
+
+typedef enum flashOType {
+	READ = 0,
+	WRITE
+}flashOpType;
+
 /*general configuration structures*/
 gConf_t generalConf;
 wArea_t areaConf;
 
+
 /*global structure holding last adc values */
 mMeasTime_t lastAdcConv;
 
-/*global structure holding the handles for dynamically allocated tasks and queues */
+/*global structure holding the handles for allocated tasks and queues */
 actTaskQueueH_t savedHandles[MAX_N_PUMP];
+
+/*
+ * Function prototypes
+ */
+
+void configInit(void);
+void initActuationTasks(void);
+void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint8_t* pOffset);
+void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint8_t* offset, uint8_t size);
+
 
 #endif /* INC_CONFIGURATION_H_ */

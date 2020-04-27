@@ -25,8 +25,11 @@ void configInit(void){
 		generalConf.nSens = N_SENS;
 		generalConf.nPump = N_PUMP;
 		generalConf.nSov = N_SOV;
-		generalConf.lastFlashPageNum = FLASH_READINGS_ADDR;
+		generalConf.lastFlashPageNumAdc = FLASH_ADC_LOG_ADDR;
 		generalConf.adcConvTimeInterval = MEAS_INTERVAL;
+		generalConf.lastFlashPageNumAct = FLASH_ACT_LOG_ADDR;
+		generalConf.pageOffsetAct = 0;
+		generalConf.pageOffsetAdc = 0;
 		W25qxx_EraseChip();
 		/* Save to external flash */
 		W25qxx_WritePage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
@@ -34,7 +37,7 @@ void configInit(void){
 		printf("w25qxx init - Default general configuration initialized to flash\r\n");
 #endif
 		/* Init default watering areas */
-		areaConf.wateringTime = WATERING_TIME;
+		areaConf.wateringDuration = WATERING_TIME;
 		areaConf.wateringInterval = WATERING_INTERVAL;
 		areaConf.lastWateringtime = 0;
 		areaConf.threshold = 0;
@@ -45,8 +48,10 @@ void configInit(void){
 		memset(areaConf.sovID, 0, sizeof(areaConf.sovID));
 
 		for (i=0; i<N_AREA; i++){
-			areaConf.areaID = i+1;
-			areaConf.pumpID = i+1; //starting id should be 1 so that zero is considered not existing
+			areaConf.areaID = i; //must start at zero for later indexing
+			areaConf.pumpID = 1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
+			areaConf.wateringDuration = WATERING_TIME;
+			areaConf.wateringInterval = WATERING_INTERVAL+i*7000;
 			W25qxx_WritePage((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
 		}
 #if (PRINTF_DEBUG == 1)
@@ -110,3 +115,82 @@ void initActuationTasks(void){
 		}
 	}
 }
+
+void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint8_t* pOffset){
+	uint16_t nBytes;
+	uint16_t nPage;
+	uint8_t nBytesPage;
+	uint8_t offset;
+	wArea_t *pWarea;
+	/* Data size must be smaller than the page size! (256 bytes) */
+	assert_param(size <= w25qxx.PageSize);
+
+	/* Must take a mutex here because several parallel tasks may try to access the global confifuration structures in parallel */
+	/* to do */
+
+	switch(type){
+
+	case(mMeasTimeData):{
+
+		if(operationType == WRITE){
+			W25qxx_WritePage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+		}
+		else{
+			W25qxx_ReadPage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+		}
+
+		updateOffset(FLASH_ADC_LOG_ADDR, pPageNum, (FLASH_ACT_LOG_ADDR - 1), pOffset, size);
+		break;
+	}
+	case(wTimeData):{
+		if(operationType == WRITE){
+			W25qxx_WritePage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+		}
+		else{
+			W25qxx_ReadPage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+		}
+
+		updateOffset(FLASH_ACT_LOG_ADDR, pPageNum, w25qxx.PageCount, pOffset, size);
+		break;
+	}
+	case(wAreaData):{
+		pWarea = data;
+		/* Get the page number and offset for the given area */
+		nBytes = pWarea->areaID * sizeof(wArea_t);
+		nPage =  nBytes % w25qxx.PageSize;
+		nBytesPage = (w25qxx.PageSize % sizeof(wArea_t)) * sizeof(wArea_t);
+		offset = nBytes - nPage*nBytesPage;
+
+		if(operationType == WRITE){
+			W25qxx_WritePage((uint8_t*)data, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
+
+		}else{
+			W25qxx_ReadPage((uint8_t*)data, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
+		}
+		break;
+	}
+	case(gConfData):{
+		break;
+	}
+
+	default:
+		printf("Invalid data type when saving to flash!\n");
+
+	}
+}
+
+void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint8_t* offset, uint8_t size){
+	/* Update the page offset and page number for the next write*/
+	if(*offset + size >= w25qxx.PageSize){
+		*actualPage += 1;
+		// check if reached end of reserved memory, if so start writing from the start
+		if(*actualPage >= endPage){
+			*actualPage = startPage;
+		}
+		*offset = 0;
+	}
+	else{
+		*offset += size;
+	}
+}
+
