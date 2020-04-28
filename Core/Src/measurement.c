@@ -38,11 +38,11 @@ void adcConvTask(void const * argument)
 	lastAdcConv.time = 0;
 	for(;;)
 	{
-		//set output to give supply to sensors
+		/*Set output to give supply to sensors */
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);
 		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adcData, sizeof(adcData)/sizeof(uint16_t));
 		osSemaphoreWait (adcSemphHandle, osWaitForever);
-		//set reset supply to sensors
+		/* Reset supply to sensors */
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
 		HAL_ADC_Stop_DMA(&hadc1);
 
@@ -60,7 +60,10 @@ void adcConvTask(void const * argument)
 			lastAdcConv.meas[i] = adcData[i];
 		}
 		osMutexWait(flashMutexHandle,osWaitForever);
+		/* Save the measurements to flash*/
 		readWriteFlash((void*)&lastAdcConv, sizeof(lastAdcConv), mMeasTimeData, WRITE, &gConf.pageAdc, &gConf.pageOffsetAdc);
+		/* Update the current page number and offset in the flash configuration structure */
+		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, WRITE, NULL, NULL);
 		osMutexRelease(flashMutexHandle);
 //#if (PRINTF_DEBUG == 1)
 //		if(gConf.pageAdc>= 258){
