@@ -60,6 +60,7 @@ extern osMutexId flashMutexHandle;
 #define PRINTF_DEBUG_ACT_FLASH 0
 #define PRINTF_DEBUG_ADC 0
 #define PRINTF_DEBUG_ADC_FLASH 0
+#define PRINTF_DEBUG_COM 1
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

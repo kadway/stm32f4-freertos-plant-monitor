@@ -161,6 +161,10 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		offset = nBytes - nPage*nBytesPage;
 
 		if(operationType == WRITE){
+			if(pWarea->areaID == 0){
+				/* If writting the first area then erase the sector before.*/
+				W25qxx_EraseSector(FLASH_AREA_SECTOR);
+			}
 			W25qxx_WritePage((uint8_t*)data, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
 
 		}else{
@@ -169,6 +173,7 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		break;
 	}
 	case(gConfData):{
+		/* Must erase previous data before writing new data on top*/
 		W25qxx_EraseSector(FLASH_CONFIG_SECTOR);
 		W25qxx_WritePage((uint8_t*)&data, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 		break;
@@ -193,5 +198,29 @@ void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, ui
 	else{
 		*offset += size;
 	}
+}
+
+uint32_t getNumElements(flashDataType type){
+	uint32_t nElem = 0;
+	uint16_t nPage = 0;
+	uint16_t nElemPage = 0;
+
+	switch(type){
+	case(mMeasTimeData):{
+		nPage = gConf.pageAdc - FLASH_ADC_LOG_ADDR;
+		nElemPage = w25qxx.PageSize % sizeof(mMeasTime_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc % sizeof(mMeasTime_t));
+		break;
+	}
+	case(wTimeData):{
+		nPage = gConf.pageAct - FLASH_ACT_LOG_ADDR;
+		nElemPage = w25qxx.PageSize % sizeof(wTime_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct % sizeof(wTime_t));
+		break;
+	}
+	default:
+		break;
+	}
+	return nElem;
 }
 

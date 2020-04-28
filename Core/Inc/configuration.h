@@ -41,12 +41,14 @@
 /*
  * Definition of control bytes for SPI communication with ESP8266
  */
-#define ESP_GET_CONF 0xAA //get general configuration data
-#define ESP_SET_CONF 0xAB
-#define ESP_GET_AREA 0xBA //get area configuration data
-#define ESP_SET_AREA 0xBB
-#define ESP_GET_DATA 0xCA //get measurements data
-#define ESP_CLEAR_DATA 0xCB
+#define ESP_GET_CONF       0xAA //get general configuration data
+#define ESP_SET_CONF       0xAB
+#define ESP_GET_AREA 	   0xBA //get area configuration data
+#define ESP_SET_AREA	   0xBB
+#define ESP_GET_DATA_ADC   0xCA //get measurements data
+#define ESP_CLEAR_DATA_ADC 0xCB
+#define ESP_GET_DATA_ACT   0xDA //get actuation data
+#define ESP_CLEAR_DATA_ACT 0xDB
 
 #define ESP_STOP_CONTROL_TASK    0xDA //suspend control task
 #define ESP_RESUME_CONTROL_TASK  0xDB //resume control task
@@ -134,5 +136,5 @@ void configInit(void);
 void initActuationTasks(void);
 void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint16_t* pOffset);
 void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint16_t* offset, uint8_t size);
-
+uint32_t getNumElements(flashDataType type);
 #endif /* INC_CONFIGURATION_H_ */

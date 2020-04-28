@@ -8,4 +8,8 @@
 /*
  * Function prototypes
  */
+#include "main.h"
+
+
 void spiEspComTask(void const * argument);
+
