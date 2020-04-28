@@ -169,6 +169,8 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		break;
 	}
 	case(gConfData):{
+		W25qxx_EraseSector(FLASH_CONFIG_SECTOR);
+		W25qxx_WritePage((uint8_t*)&data, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 		break;
 	}
 

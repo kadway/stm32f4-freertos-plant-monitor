@@ -117,13 +117,16 @@ void actuationTask(void const * argument){
 		/* Update the area configuration with the new time of watering*/
 		pAreaConf->lastWateringtime = HAL_GetTick();
 
-		/* Save the time of watering to flash */
+		/* Prepare data for logging in external flash memory */
 		wateringTime.areaID = pAreaConf->areaID;
 		wateringTime.duration = pAreaConf->wateringDuration;
 		wateringTime.time = HAL_GetTick();
 
 		osMutexWait(flashMutexHandle,osWaitForever);
+		/* Save the time of watering to flash*/
 		readWriteFlash((void *) &wateringTime, sizeof(wTime_t), wTimeData, WRITE, &gConf.pageAct, &gConf.pageOffsetAct);
+		/* Update the current page number and offset in the flash configuration structure */
+		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, WRITE, NULL, NULL);
 		osMutexRelease(flashMutexHandle);
 
 		/* Activate the respective pumps and solenoid valves */

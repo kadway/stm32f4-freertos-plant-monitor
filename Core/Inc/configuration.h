@@ -15,7 +15,9 @@
  */
 #define FLASH_DEF_INIT_CODE    0xABCD     //Bytes for checking default initialization
 #define FLASH_CONFIG_ADDR      0 //Memory block0 sector 0 for storing of general configuration
+#define FLASH_CONFIG_SECTOR	   0 //sector 0, definition for erasing
 #define FLASH_AREA_ADDR        16 //Memory block0 sector 1 - start address(page number) of watering areas configuration
+#define FLASH_AREA_SECTOR	   1 //sector 1, definition for erasing
 #define FLASH_ADC_LOG_ADDR     16*16    //Memory block1 - start address(page number) of stored data from ADC readings
 #define FLASH_ACT_LOG_ADDR     16*16*30 //Memory block30 - start address(page number) of stored data from ADC readings
 
