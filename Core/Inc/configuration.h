@@ -23,14 +23,14 @@
  * Definitions for default configurations
  */
 #define N_AREA 1  //default numumber of watering areas
-#define N_SENS 15  //default numumber of moisture sensors
+#define N_SENS 5  //default numumber of moisture sensors
 #define N_PUMP 1  //default numumber of watering pumps
 #define N_SOV  5  //default numumber of solenoid valves
 #define MAX_N_PUMP 5 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles
 
 #define WATERING_TIME 1 *1000/*ms*/  //default watering time in ticks (milisecond)
-#define WATERING_INTERVAL 5*1000/*ms*/ //default interval for watering in ticks (milisecond)
-#define MEAS_INTERVAL 30*1000/*ms*/ //default interval for ADC readings in ticks (milisecond)
+#define WATERING_INTERVAL 7*1000/*ms*/ //default interval for watering in ticks (milisecond)
+#define MEAS_INTERVAL 3600 * 1000/*ms*/ //default interval for ADC readings in ticks (milisecond)
 #define MAX_N_SENS 10
 #define MAX_N_SOV  5
 #define N_ADC  15
@@ -51,12 +51,12 @@
 
 
 typedef struct generalConfig{
+	uint32_t adcConvTimeInterval;   //interval for ADC readings
 	uint16_t initCode;              //Bytes for checking default initialization
-	uint16_t adcConvTimeInterval;   //interval for ADC readings (minutes)
-	uint16_t lastFlashPageNumAdc;   //last page number where readings from sensors was written
-	uint16_t lastFlashPageNumAct;   //last page number where actuation log was written
-	uint8_t pageOffsetAdc;          //page offset in bytes for writing to external flash memory
-	uint8_t pageOffsetAct;          //page offset in bytes for writing to external flash memory
+	uint16_t pageAdc;   //last page number where readings from sensors was written
+	uint16_t pageAct;   //last page number where actuation log was written
+	uint16_t pageOffsetAdc;          //page offset in bytes for writing to external flash memory
+	uint16_t pageOffsetAct;          //page offset in bytes for writing to external flash memory
 	uint8_t nArea;  //number of watering areas
 	uint8_t nSens;  //number of moisture sensors
 	uint8_t nPump;  //number of water pumps
@@ -113,8 +113,8 @@ typedef enum flashOType {
 }flashOpType;
 
 /*general configuration structures*/
-gConf_t generalConf;
-wArea_t areaConf;
+gConf_t gConf;
+wArea_t aConf;
 
 
 /*global structure holding last adc values */
@@ -129,8 +129,7 @@ actTaskQueueH_t savedHandles[MAX_N_PUMP];
 
 void configInit(void);
 void initActuationTasks(void);
-void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint8_t* pOffset);
-void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint8_t* offset, uint8_t size);
-
+void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint16_t* pOffset);
+void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint16_t* offset, uint8_t size);
 
 #endif /* INC_CONFIGURATION_H_ */

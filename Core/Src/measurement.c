@@ -18,7 +18,6 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc){
 #endif
 }
 
-
 /**
  * @brief Function implementing the adcConvTask thread.
  * @param argument: Not used
@@ -30,12 +29,13 @@ void adcConvTask(void const * argument)
 	/* USER CODE BEGIN StartTask02 */
 	uint16_t adcData [N_ADC];
 	uint8_t i;
-	uint32_t time = 1;
-	uint8_t offset = 0;
-	//  uint8_t unlocked = 0;
+	uint8_t unlocked = 0;
+	mMeasTime_t data;
+	uint16_t pPageNum;
+	uint16_t pOffset;
 	/*Must take semaphore the first time... */
 	osSemaphoreWait (adcSemphHandle, osWaitForever);
-
+	lastAdcConv.time = 0;
 	for(;;)
 	{
 		//set output to give supply to sensors
@@ -52,60 +52,32 @@ void adcConvTask(void const * argument)
 		//  }
 		//#endif
 		//to do: get time from RTC
-		lastAdcConv.time = time;
-
+		lastAdcConv.time += 1;
+		lastAdcConv.temperature = 25;
 		//fill in conversion values in data structure and store it in external flash
 		//save up only until the number of used sensors
-		for(i=0; i<generalConf.nSens; i++){
-			//id not really necessary!?
+		for(i=0; i<gConf.nSens; i++){
 			lastAdcConv.meas[i] = adcData[i];
 		}
 
-		//to do:delete after adding RTC time
-		time += 1;
+		readWriteFlash((void*)&lastAdcConv, sizeof(lastAdcConv), mMeasTimeData, WRITE, &gConf.pageAdc, &gConf.pageOffsetAdc);
 
-		assert_param(sizeof(lastAdcConv) <= w25qxx.PageSize);
-		W25qxx_WritePage((uint8_t*)&lastAdcConv, generalConf.lastFlashPageNumAdc, offset, sizeof(lastAdcConv));
-
-		if(offset + sizeof(mMeasTime_t) >= w25qxx.PageSize){
-			generalConf.lastFlashPageNumAdc += 1;
-			// check if reached end of memory, if so start writing from FLASH_READINGS_ADDR
-			if(generalConf.lastFlashPageNumAdc >= w25qxx.PageCount){
-				generalConf.lastFlashPageNumAdc = FLASH_ADC_LOG_ADDR;
-				//nlocked = 1;
-			}
-			offset = 0;
-		}
-		else{
-			offset += sizeof(lastAdcConv);
-			generalConf.pageOffsetAdc = offset;
-		}
-
-		osDelay((uint32_t)generalConf.adcConvTimeInterval);
-
-		//	#if (PRINTF_DEBUG == 1)
-		//		  if(unlocked){
-		//			  // test read
-		//			  monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
-		//			  offset = 0;
-		//			  do{
-		//				  W25qxx_ReadPage((uint8_t*)&lastAdcConv, monitorConf.lastFlashPageNum, offset, sizeof(lastAdcConv));
-		//				  printf("Page to READ: %d, Offset: %X,Time %lu:\n", monitorConf.lastFlashPageNum, offset,lastAdcConv.time);
-		//				  osDelay(100);
-		//				  if(offset + sizeof(mMeasTime_t) >= w25qxx.PageSize){
-		//					  monitorConf.lastFlashPageNum += 1;
-		//					  offset = 0;
-		//				  }
-		//				  else
-		//				  {
-		//					  offset += sizeof(lastAdcConv);
-		//				  }
-		//			  }while(monitorConf.lastFlashPageNum < lastMemAddr);
-		//			  monitorConf.lastFlashPageNum = FLASH_READINGS_ADDR;
-		//			  unlocked = 0;
-		//		  }
-		//		  osDelay(1);
-		//	#endif
+//#if (PRINTF_DEBUG == 1)
+//		if(gConf.pageAdc>= 258){
+//			unlocked = 1;
+//		}
+//		pPageNum = FLASH_ADC_LOG_ADDR;
+//		pOffset = 0;
+//		if(unlocked){
+//			do{
+//				readWriteFlash((void*)&data, sizeof(data), mMeasTimeData, READ, &pPageNum, &pOffset);
+//				printf("Time %lu temperature %lu adc_data %lu\n", data.time, data.temperature, data.meas[1]);
+//				osDelay(100);
+//			}while(pPageNum < gConf.pageAdc || pOffset < gConf.pageOffsetAdc);
+//			unlocked = 0;
+//			osDelay(100);
+//		}
+//#endif
+		osDelay(gConf.adcConvTimeInterval);
 	}
-	/* USER CODE END adcConvTask */
-}
+}	/* USER CODE END adcConvTask */

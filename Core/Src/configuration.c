@@ -15,44 +15,44 @@ osThreadId actuationTaskHandle;
 void configInit(void){
 	uint16_t i=0;
 
-	W25qxx_ReadPage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(generalConf));
+	W25qxx_ReadPage((uint8_t*)&gConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf));
 
 	//if(generalConf.initCode != FLASH_DEF_INIT_CODE){
 		if(1){
 		/* Init general configurations */
-		generalConf.initCode=FLASH_DEF_INIT_CODE;
-		generalConf.nArea = N_AREA;
-		generalConf.nSens = N_SENS;
-		generalConf.nPump = N_PUMP;
-		generalConf.nSov = N_SOV;
-		generalConf.lastFlashPageNumAdc = FLASH_ADC_LOG_ADDR;
-		generalConf.adcConvTimeInterval = MEAS_INTERVAL;
-		generalConf.lastFlashPageNumAct = FLASH_ACT_LOG_ADDR;
-		generalConf.pageOffsetAct = 0;
-		generalConf.pageOffsetAdc = 0;
+		gConf.initCode=FLASH_DEF_INIT_CODE;
+		gConf.nArea = N_AREA;
+		gConf.nSens = N_SENS;
+		gConf.nPump = N_PUMP;
+		gConf.nSov = N_SOV;
+		gConf.pageAdc = FLASH_ADC_LOG_ADDR;
+		gConf.adcConvTimeInterval = MEAS_INTERVAL;
+		gConf.pageAct = FLASH_ACT_LOG_ADDR;
+		gConf.pageOffsetAct = 0;
+		gConf.pageOffsetAdc = 0;
 		W25qxx_EraseChip();
 		/* Save to external flash */
-		W25qxx_WritePage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
+		W25qxx_WritePage((uint8_t*)&gConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 #if (PRINTF_DEBUG == 1)
 		printf("w25qxx init - Default general configuration initialized to flash\r\n");
 #endif
 		/* Init default watering areas */
-		areaConf.wateringDuration = WATERING_TIME;
-		areaConf.wateringInterval = WATERING_INTERVAL;
-		areaConf.lastWateringtime = 0;
-		areaConf.threshold = 0;
-		areaConf.openLoop = 1;
+		aConf.wateringDuration = WATERING_TIME;
+		aConf.wateringInterval = WATERING_INTERVAL;
+		aConf.lastWateringtime = 0;
+		aConf.threshold = 0;
+		aConf.openLoop = 1;
 		//starting id zero means element is not existing and should be disconsidered
 		//ids to be initialized by user
-		memset(areaConf.sensID, 0, sizeof(areaConf.sensID));
-		memset(areaConf.sovID, 0, sizeof(areaConf.sovID));
+		memset(aConf.sensID, 0, sizeof(aConf.sensID));
+		memset(aConf.sovID, 0, sizeof(aConf.sovID));
 
 		for (i=0; i<N_AREA; i++){
-			areaConf.areaID = i; //must start at zero for later indexing
-			areaConf.pumpID = 1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
-			areaConf.wateringDuration = WATERING_TIME;
-			areaConf.wateringInterval = WATERING_INTERVAL+i*7000;
-			W25qxx_WritePage((uint8_t*)&areaConf, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
+			aConf.areaID = i; //must start at zero for later indexing
+			aConf.pumpID = 1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
+			aConf.wateringDuration = WATERING_TIME;
+			aConf.wateringInterval = WATERING_INTERVAL+i*7000;
+			W25qxx_WritePage((uint8_t*)&aConf, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
 		}
 #if (PRINTF_DEBUG == 1)
 			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
@@ -77,12 +77,12 @@ void initActuationTasks(void){
 	void const * pHandle = NULL;
 	/* Loop over the number of existing pumps */
 
-	for (pumpID=0; pumpID<generalConf.nPump; pumpID++){
+	for (pumpID=0; pumpID<gConf.nPump; pumpID++){
 
-		for(areaID=0; areaID<generalConf.nArea; areaID++){
+		for(areaID=0; areaID<gConf.nArea; areaID++){
 			/* Get necessary queue size by reading how many areas use the same pump */
-			W25qxx_ReadPage((uint8_t*)&areaConf, FLASH_AREA_ADDR, areaID*sizeof(wArea_t), sizeof(wArea_t));
-			if(areaConf.pumpID == pumpID+1){
+			W25qxx_ReadPage((uint8_t*)&aConf, FLASH_AREA_ADDR, areaID*sizeof(wArea_t), sizeof(wArea_t));
+			if(aConf.pumpID == pumpID+1){
 				queueSize += 1;
 #if (PRINTF_DEBUG == 1)
 				printf("Water area %d uses pump %d. Queue size is now %d \n", areaID+1,pumpID+1, queueSize);
@@ -91,7 +91,7 @@ void initActuationTasks(void){
 		}
 		if(queueSize > 0){
 			/* Create the queue(s) */
-			osMailQDef(actuationQueue, queueSize, areaConf);
+			osMailQDef(actuationQueue, queueSize, aConf);
 			savedHandles[pumpID].queueH = osMailCreate(osMailQ(actuationQueue), NULL);
 
 			/* If memory allocation succedded pass the pointer on to the new task and timer */
@@ -116,12 +116,13 @@ void initActuationTasks(void){
 	}
 }
 
-void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint8_t* pOffset){
+void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint16_t* pOffset){
 	uint16_t nBytes;
 	uint16_t nPage;
-	uint8_t nBytesPage;
-	uint8_t offset;
+	uint16_t nBytesPage;
+	uint16_t offset;
 	wArea_t *pWarea;
+
 	/* Data size must be smaller than the page size! (256 bytes) */
 	assert_param(size <= w25qxx.PageSize);
 
@@ -133,21 +134,20 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 	case(mMeasTimeData):{
 
 		if(operationType == WRITE){
-			W25qxx_WritePage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_WritePage((uint8_t*)data,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 		else{
-			W25qxx_ReadPage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_ReadPage((uint8_t*)data,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
-
-		updateOffset(FLASH_ADC_LOG_ADDR, pPageNum, (FLASH_ACT_LOG_ADDR - 1), pOffset, size);
+		updateOffset(FLASH_ADC_LOG_ADDR, pPageNum, FLASH_ACT_LOG_ADDR, pOffset, size);
 		break;
 	}
 	case(wTimeData):{
 		if(operationType == WRITE){
-			W25qxx_WritePage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_WritePage((uint8_t*)data, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 		else{
-			W25qxx_ReadPage((uint8_t*)data, (uint32_t) *pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_ReadPage((uint8_t*)data, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 
 		updateOffset(FLASH_ACT_LOG_ADDR, pPageNum, w25qxx.PageCount, pOffset, size);
@@ -179,7 +179,7 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 	}
 }
 
-void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint8_t* offset, uint8_t size){
+void updateOffset(uint16_t startPage, uint16_t* actualPage, uint16_t endPage, uint16_t* offset, uint8_t size){
 	/* Update the page offset and page number for the next write*/
 	if(*offset + size >= w25qxx.PageSize){
 		*actualPage += 1;
