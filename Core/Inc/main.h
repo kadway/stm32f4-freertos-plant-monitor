@@ -51,7 +51,7 @@ extern osThreadId controlTaskHandle;
 extern osSemaphoreId spiEspSemphTXHandle;
 extern osSemaphoreId spiEspSemphHandle;
 extern osSemaphoreId adcSemphHandle;
-
+extern osMutexId flashMutexHandle;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */

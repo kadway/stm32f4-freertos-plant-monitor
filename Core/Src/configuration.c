@@ -14,7 +14,6 @@ osThreadId actuationTaskHandle;
 
 void configInit(void){
 	uint16_t i=0;
-
 	W25qxx_ReadPage((uint8_t*)&gConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf));
 
 	//if(generalConf.initCode != FLASH_DEF_INIT_CODE){
@@ -37,29 +36,28 @@ void configInit(void){
 		printf("w25qxx init - Default general configuration initialized to flash\r\n");
 #endif
 		/* Init default watering areas */
-		aConf.wateringDuration = WATERING_TIME;
-		aConf.wateringInterval = WATERING_INTERVAL;
-		aConf.lastWateringtime = 0;
-		aConf.threshold = 0;
-		aConf.openLoop = 1;
-		//starting id zero means element is not existing and should be disconsidered
-		//ids to be initialized by user
-		memset(aConf.sensID, 0, sizeof(aConf.sensID));
-		memset(aConf.sovID, 0, sizeof(aConf.sovID));
+
 
 		for (i=0; i<N_AREA; i++){
-			aConf.areaID = i; //must start at zero for later indexing
-			aConf.pumpID = 1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
-			aConf.wateringDuration = WATERING_TIME;
-			aConf.wateringInterval = WATERING_INTERVAL+i*7000;
-			W25qxx_WritePage((uint8_t*)&aConf, FLASH_AREA_ADDR, i*sizeof(wArea_t), sizeof(wArea_t));
+			aConf[i].lastWateringtime = 0;
+			aConf[i].threshold = 0;
+			aConf[i].openLoop = 1;
+			//starting id zero means element is not existing and should be disconsidered
+			//ids to be initialized by user
+			memset(aConf[i].sensID, 0, sizeof(aConf[i].sensID));
+			memset(aConf[i].sovID, 0, sizeof(aConf[i].sovID));
+
+			aConf[i].areaID = i; //must start at zero for later indexing
+			aConf[i].pumpID = i+1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
+			aConf[i].wateringDuration = WATERING_TIME;
+			aConf[i].wateringInterval = WATERING_INTERVAL+i*5000;
+			readWriteFlash((void *) &aConf, sizeof(wArea_t), wAreaData, WRITE, NULL, NULL);
 		}
 #if (PRINTF_DEBUG == 1)
 			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
 			printf("Sizes of structures: generalConf %d areaConf %d\n", sizeof(gConf_t), sizeof(wArea_t));
 			osDelay(5000);
 			//printf("\n ----monitor conf: -----\n");
-			//W25qxx_ReadPage((uint8_t*)&generalConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 #endif
 	}
 	else{
@@ -81,8 +79,7 @@ void initActuationTasks(void){
 
 		for(areaID=0; areaID<gConf.nArea; areaID++){
 			/* Get necessary queue size by reading how many areas use the same pump */
-			W25qxx_ReadPage((uint8_t*)&aConf, FLASH_AREA_ADDR, areaID*sizeof(wArea_t), sizeof(wArea_t));
-			if(aConf.pumpID == pumpID+1){
+			if(aConf[areaID].pumpID == pumpID+1){
 				queueSize += 1;
 #if (PRINTF_DEBUG == 1)
 				printf("Water area %d uses pump %d. Queue size is now %d \n", areaID+1,pumpID+1, queueSize);
@@ -91,8 +88,10 @@ void initActuationTasks(void){
 		}
 		if(queueSize > 0){
 			/* Create the queue(s) */
-			osMailQDef(actuationQueue, queueSize, aConf);
-			savedHandles[pumpID].queueH = osMailCreate(osMailQ(actuationQueue), NULL);
+			osMessageQDef(actuationQueue, queueSize, uint32_t);
+			//osMailQDef(actuationQueue, queueSize, aConf);
+			savedHandles[pumpID].queueH = osMessageCreate(osMessageQ(actuationQueue), NULL);
+			//savedHandles[pumpID].queueH = osMailCreate(osMailQ(actuationQueue), NULL);
 
 			/* If memory allocation succedded pass the pointer on to the new task and timer */
 			if(savedHandles[pumpID].queueH != NULL){

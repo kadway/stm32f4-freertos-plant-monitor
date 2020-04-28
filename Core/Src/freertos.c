@@ -57,6 +57,8 @@ osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
 osSemaphoreId adcSemphHandle;
 
+osMutexId flashMutexHandle;
+
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
@@ -152,7 +154,8 @@ void MX_FREERTOS_Init(void) {
 	/* USER CODE END Init */
 
 	/* USER CODE BEGIN RTOS_MUTEX */
-	/* add mutexes, ... */
+	  osMutexDef(flashMutex);
+	  flashMutexHandle = osMutexCreate(osMutex(flashMutex));
 	/* USER CODE END RTOS_MUTEX */
 
 	/* Create the semaphores(s) */
@@ -174,8 +177,8 @@ void MX_FREERTOS_Init(void) {
 
 	/* Create the thread(s) */
 	/* definition and creation of spiEspComT */
-	osThreadDef(spiEspComT, spiEspComTask, osPriorityBelowNormal, 0, 300);
-	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
+	//osThreadDef(spiEspComT, spiEspComTask, osPriorityBelowNormal, 0, 300);
+	//spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
 	/* definition and creation of adcTask */
 	osThreadDef(adcTask, adcConvTask, osPriorityNormal, 0, 300);

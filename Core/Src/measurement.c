@@ -59,9 +59,9 @@ void adcConvTask(void const * argument)
 		for(i=0; i<gConf.nSens; i++){
 			lastAdcConv.meas[i] = adcData[i];
 		}
-
+		osMutexWait(flashMutexHandle,osWaitForever);
 		readWriteFlash((void*)&lastAdcConv, sizeof(lastAdcConv), mMeasTimeData, WRITE, &gConf.pageAdc, &gConf.pageOffsetAdc);
-
+		osMutexRelease(flashMutexHandle);
 //#if (PRINTF_DEBUG == 1)
 //		if(gConf.pageAdc>= 258){
 //			unlocked = 1;
