@@ -2,7 +2,7 @@
  * measurement.c
  *
  *  Created on: Apr 24, 2020
- *      Author: johny
+ *      Author: João Gonçalves
  */
 
 #include "main.h"
@@ -13,9 +13,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 }
 
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc){
-#if (PRINTF_DEBUG == 1)
 	printf("Adc error %d.\n", (int)hadc->ErrorCode);
-#endif
 }
 
 /**
@@ -26,14 +24,10 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc){
 
 void adcConvTask(void const * argument)
 {
-	/* USER CODE BEGIN StartTask02 */
 	uint16_t adcData [N_ADC];
 	uint8_t i;
-	uint8_t unlocked = 0;
-	mMeasTime_t data;
-	uint16_t pPageNum;
-	uint16_t pOffset;
-	/*Must take semaphore the first time... */
+
+	/* Must take semaphore the first time... */
 	osSemaphoreWait (adcSemphHandle, osWaitForever);
 	lastAdcConv.time = 0;
 	for(;;)
@@ -46,16 +40,18 @@ void adcConvTask(void const * argument)
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
 		HAL_ADC_Stop_DMA(&hadc1);
 
-		//#if (PRINTF_DEBUG == 1)
-		//for(i=0; i<N_ADC; i++){
-		//  printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)data[i] * 3300) / 4096));
-		//  }
-		//#endif
-		//to do: get time from RTC
+#if (PRINTF_DEBUG_ADC == 1)
+		for(i=0; i<N_ADC; i++){
+			printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)data[i] * 3300) / 4096));
+		}
+#endif
+
+		//to do: get time from RTC and temperature from ds3231
 		lastAdcConv.time += 1;
 		lastAdcConv.temperature = 25;
-		//fill in conversion values in data structure and store it in external flash
-		//save up only until the number of used sensors
+
+		/* Fill in conversion values in data structure and store it in external flash */
+		/* Save up only until the number of used sensors */
 		for(i=0; i<gConf.nSens; i++){
 			lastAdcConv.meas[i] = adcData[i];
 		}
@@ -65,22 +61,22 @@ void adcConvTask(void const * argument)
 		/* Update the current page number and offset in the flash configuration structure */
 		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, WRITE, NULL, NULL);
 		osMutexRelease(flashMutexHandle);
-//#if (PRINTF_DEBUG == 1)
-//		if(gConf.pageAdc>= 258){
-//			unlocked = 1;
-//		}
-//		pPageNum = FLASH_ADC_LOG_ADDR;
-//		pOffset = 0;
-//		if(unlocked){
-//			do{
-//				readWriteFlash((void*)&data, sizeof(data), mMeasTimeData, READ, &pPageNum, &pOffset);
-//				printf("Time %lu temperature %lu adc_data %lu\n", data.time, data.temperature, data.meas[1]);
-//				osDelay(100);
-//			}while(pPageNum < gConf.pageAdc || pOffset < gConf.pageOffsetAdc);
-//			unlocked = 0;
-//			osDelay(100);
-//		}
-//#endif
+#if (PRINTF_DEBUG_ADC_FLASH == 1)
+		if(gConf.pageAdc>= 258){
+			unlocked = 1;
+		}
+		pPageNum = FLASH_ADC_LOG_ADDR;
+		pOffset = 0;
+		if(unlocked){
+			do{
+				readWriteFlash((void*)&data, sizeof(data), mMeasTimeData, READ, &pPageNum, &pOffset);
+				printf("Time %lu temperature %lu adc_data %lu\n", data.time, data.temperature, data.meas[1]);
+				osDelay(100);
+			}while(pPageNum < gConf.pageAdc || pOffset < gConf.pageOffsetAdc);
+			unlocked = 0;
+			osDelay(100);
+		}
+#endif
 		osDelay(gConf.adcConvTimeInterval);
 	}
-}	/* USER CODE END adcConvTask */
+}
