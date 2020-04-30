@@ -214,14 +214,14 @@ uint32_t getNumElements(flashDataType type){
 	switch(type){
 	case(mMeasTimeData):{
 		nPage = gConf.pageAdc - FLASH_ADC_LOG_ADDR;
-		nElemPage = w25qxx.PageSize % sizeof(mMeasTime_t);
-		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc % sizeof(mMeasTime_t));
+		nElemPage = w25qxx.PageSize / sizeof(mMeasTime_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc / sizeof(mMeasTime_t));
 		break;
 	}
 	case(wTimeData):{
 		nPage = gConf.pageAct - FLASH_ACT_LOG_ADDR;
-		nElemPage = w25qxx.PageSize % sizeof(wTime_t);
-		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct % sizeof(wTime_t));
+		nElemPage = w25qxx.PageSize / sizeof(wTime_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct / sizeof(wTime_t));
 		break;
 	}
 	default:
