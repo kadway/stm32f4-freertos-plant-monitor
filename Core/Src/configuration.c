@@ -13,11 +13,11 @@ osThreadId actuationTaskHandle;
 
 
 void configInit(void){
-	uint16_t i=0;
+	uint16_t i=0, j= 0;
 	W25qxx_ReadPage((uint8_t*)&gConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf));
 
-	//if(generalConf.initCode != FLASH_DEF_INIT_CODE){
-		if(1){
+	if(gConf.initCode != FLASH_DEF_INIT_CODE){
+		//if(1){
 		/* Init general configurations */
 		gConf.initCode=FLASH_DEF_INIT_CODE;
 		gConf.nArea = N_AREA;
@@ -44,20 +44,26 @@ void configInit(void){
 			aConf[i].openLoop = 1;
 			//starting id zero means element is not existing and should be disconsidered
 			//ids to be initialized by user
-			memset(aConf[i].sensID, 0, sizeof(aConf[i].sensID));
-			memset(aConf[i].sovID, 0, sizeof(aConf[i].sovID));
+			for(j=0;j<sizeof(aConf[i].sensID); j++){
+				aConf[i].sensID[j]=i+10;
+			}
+			for(j=0;j<sizeof(aConf[i].sovID); j++){
+				aConf[i].sovID[j]=i+20;
+			}
+			//memset(aConf[i].sensID, 0, sizeof(aConf[i].sensID));
+			//memset(aConf[i].sovID, 0, sizeof(aConf[i].sovID));
 
 			aConf[i].areaID = i; //must start at zero for later indexing
 			aConf[i].pumpID = i+1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
 			aConf[i].wateringDuration = WATERING_TIME;
 			aConf[i].wateringInterval = WATERING_INTERVAL+i*5000;
-			readWriteFlash((void *) &aConf, sizeof(wArea_t), wAreaData, WRITE, NULL, NULL);
+			readWriteFlash((void *) &aConf[i], sizeof(wArea_t), wAreaData, WRITE, NULL, NULL);
+
 		}
 #if (PRINTF_DEBUG == 1)
 			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
 			printf("Sizes of structures: generalConf %d areaConf %d\n", sizeof(gConf_t), sizeof(wArea_t));
 			osDelay(5000);
-			//printf("\n ----monitor conf: -----\n");
 #endif
 	}
 	else{
@@ -99,7 +105,7 @@ void initActuationTasks(void){
 				queueSize = 0;
 
 				/* Creation of actuation task(s) */
-				osThreadDef(actTask, actuationTask, osPriorityAboveNormal, MAX_N_PUMP, 300);
+				osThreadDef(actTask, actuationTask, osPriorityNormal, MAX_N_PUMP, 300);
 				savedHandles[pumpID].taskH = osThreadCreate(osThread(actTask), pHandle);
 #if (PRINTF_DEBUG == 1)
 				printf("Created Queue and task for pump %d\n", pumpID+1);
@@ -156,8 +162,8 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		pWarea = data;
 		/* Get the page number and offset for the given area */
 		nBytes = pWarea->areaID * sizeof(wArea_t);
-		nPage =  nBytes % w25qxx.PageSize;
-		nBytesPage = (w25qxx.PageSize % sizeof(wArea_t)) * sizeof(wArea_t);
+		nPage =  nBytes / w25qxx.PageSize;
+		nBytesPage = (w25qxx.PageSize / sizeof(wArea_t)) * sizeof(wArea_t);
 		offset = nBytes - nPage*nBytesPage;
 
 		if(operationType == WRITE){
@@ -208,14 +214,14 @@ uint32_t getNumElements(flashDataType type){
 	switch(type){
 	case(mMeasTimeData):{
 		nPage = gConf.pageAdc - FLASH_ADC_LOG_ADDR;
-		nElemPage = w25qxx.PageSize % sizeof(mMeasTime_t);
-		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc % sizeof(mMeasTime_t));
+		nElemPage = w25qxx.PageSize / sizeof(mMeasTime_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc / sizeof(mMeasTime_t));
 		break;
 	}
 	case(wTimeData):{
 		nPage = gConf.pageAct - FLASH_ACT_LOG_ADDR;
-		nElemPage = w25qxx.PageSize % sizeof(wTime_t);
-		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct % sizeof(wTime_t));
+		nElemPage = w25qxx.PageSize / sizeof(wTime_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct / sizeof(wTime_t));
 		break;
 	}
 	default:

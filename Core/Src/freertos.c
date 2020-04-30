@@ -177,15 +177,15 @@ void MX_FREERTOS_Init(void) {
 
 	/* Create the thread(s) */
 	/* definition and creation of spiEspComT */
-	//osThreadDef(spiEspComT, spiEspComTask, osPriorityBelowNormal, 0, 300);
-	//spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
+	osThreadDef(spiEspComT, spiEspComTask, osPriorityRealtime, 0, 300);
+	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
 	/* definition and creation of adcTask */
 	osThreadDef(adcTask, adcConvTask, osPriorityNormal, 0, 300);
 	adcTaskHandle = osThreadCreate(osThread(adcTask), NULL);
 
 	/* definition and creation of contolTask */
-	osThreadDef(controlT, controlTask, osPriorityHigh, 0, 400);
+	osThreadDef(controlT, controlTask, osPriorityAboveNormal, 0, 400);
 	controlTaskHandle = osThreadCreate(osThread(controlT), NULL);
 	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */

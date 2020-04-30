@@ -46,6 +46,7 @@ void spiEspComTask(void const * argument)
 			/* Send general configuration data */
 			if(osMutexWait(flashMutexHandle,200)!= osOK){
 				printf("Error or timeout getting Mutex in communication task\n");
+				osDelay(200);
 			}
 			else{
 				readWriteFlash((void *) & gConf, sizeof(gConf_t), gConfData, READ, NULL, NULL);
@@ -54,6 +55,7 @@ void spiEspComTask(void const * argument)
 				osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 #if (PRINTF_DEBUG_COM == 1)
 				printf("Sent Conf data to ESP\n");
+				osDelay(200);
 #endif
 			}
 			break;
@@ -67,6 +69,7 @@ void spiEspComTask(void const * argument)
 			if ( replyMaster == ACK_MASTER){
 				if(osMutexWait(flashMutexHandle,200)!= osOK){
 					printf("Error or timeout getting Mutex in communication task\n");
+					osDelay(200);
 				}
 				else{
 					/* send wArea data */
@@ -79,6 +82,7 @@ void spiEspComTask(void const * argument)
 					osMutexRelease(flashMutexHandle);
 #if (PRINTF_DEBUG == 1)
 					printf("Sent Area data to ESP\n");
+					osDelay(200);
 #endif
 				}
 			}
@@ -211,7 +215,6 @@ void spiEspComTask(void const * argument)
 		default:
 			break;
 		}
-		osDelay(10);
 	}
 }
 

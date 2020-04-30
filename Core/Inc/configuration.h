@@ -31,7 +31,7 @@
 /*
  * Definitions for default configurations
  */
-#define N_AREA 2  //default numumber of watering areas
+#define N_AREA 5  //default numumber of watering areas
 #define N_SENS 5  //default numumber of moisture sensors
 #define N_PUMP 2  //default numumber of watering pumps
 #define N_SOV  5  //default numumber of solenoid valves
@@ -40,8 +40,8 @@
 #define WATERING_TIME 1 *1000/*ms*/  //default watering time in ticks (milisecond)
 #define WATERING_INTERVAL 7*1000/*ms*/ //default interval for watering in ticks (milisecond)
 #define MEAS_INTERVAL 3600 * 1000/*ms*/ //default interval for ADC readings in ticks (milisecond)
-#define MAX_N_SENS 10
-#define MAX_N_SOV  5
+#define MAX_N_SENS 15
+#define MAX_N_SOV  10
 #define MAX_N_AREA 30
 #define N_ADC  15
 
