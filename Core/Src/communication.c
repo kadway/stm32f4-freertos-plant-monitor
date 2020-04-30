@@ -17,9 +17,9 @@ void spiEspComTask(void const * argument)
 {
 	uint8_t ackSlave = 0xCE;
 	uint8_t command = 0x00;
-	uint32_t ackMaster = 0xE3E3E3E3;
+
 	uint32_t nElm = 0;
-	uint32_t dummySize = 0;
+	uint32_t replyMaster = 0;
 	wArea_t dummywArea; //dummy for spi transaction
 	gConf_t dummygConf; //dummy for spi transaction
 	uint16_t i=0;
@@ -61,10 +61,10 @@ void spiEspComTask(void const * argument)
 		case ESP_GET_AREA:
 			/* Send number of wArea elements */
 			nElm = gConf.nArea;
-			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&dummySize, sizeof(uint32_t));
+			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&replyMaster, sizeof(uint32_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
-			if ( command == ackMaster){
+			if ( replyMaster == ACK_MASTER){
 				if(osMutexWait(flashMutexHandle,200)!= osOK){
 					printf("Error or timeout getting Mutex in communication task\n");
 				}
@@ -117,10 +117,10 @@ void spiEspComTask(void const * argument)
 			/* Send ADC data */
 			/* Send number of elements */
 			nElm = getNumElements(mMeasTimeData);
-			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&dummySize, sizeof(uint32_t));
+			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&replyMaster, sizeof(uint32_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
-			if ( command == ackMaster){
+			if ( replyMaster == ACK_MASTER){
 				if(osMutexWait(flashMutexHandle,200)!= osOK){
 					printf("Error or timeout getting Mutex in communication task\n");
 				}
@@ -142,10 +142,10 @@ void spiEspComTask(void const * argument)
 			/* Send Actuation data */
 			/* Send number of elements */
 			nElm = getNumElements(wTimeData);
-			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&dummySize, sizeof(uint32_t));
+			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&replyMaster, sizeof(uint32_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
-			if ( command == ackMaster){
+			if ( replyMaster == ACK_MASTER){
 				if(osMutexWait(flashMutexHandle,200)!= osOK){
 					printf("Error or timeout getting Mutex in communication task\n");
 				}
@@ -164,6 +164,50 @@ void spiEspComTask(void const * argument)
 			}
 			break;
 
+		case ESP_CLEAR_DATA_ADC:
+			/* Clear flash sectors where ADC data is being stored */
+			if(osMutexWait(flashMutexHandle,200)!= osOK){
+				printf("Error or timeout getting Mutex in communication task\n");
+			}
+			else{
+				//To do: clear only adc data
+				osMutexRelease(flashMutexHandle);
+			}
+
+			break;
+
+		case ESP_CLEAR_DATA_ACT:
+			/* Clear flash sectors where Actuation data is being stored */
+			if(osMutexWait(flashMutexHandle,200)!= osOK){
+				printf("Error or timeout getting Mutex in communication task\n");
+			}
+			else{
+				//To do: clear only actuation data
+				osMutexRelease(flashMutexHandle);
+			}
+			break;
+
+		case ESP_CLEAR_LOG:
+			/* Clear all logged data sectors where ADC and Actuation data is being stored */
+			if(osMutexWait(flashMutexHandle,200)!= osOK){
+				printf("Error or timeout getting Mutex in communication task\n");
+			}
+			else{
+				for(i=0; i<32;i++){
+					W25qxx_EraseSector(FLASH_ADC_LOG_BLOCK_NUM+i);
+				}
+			}
+			break;
+		case ESP_CLEAR_CONF:
+			/* Clear general configuration data -> fallback to default init upon restart*/
+			//To do: clear clear data and force restart
+			break;
+		case ESP_STOP_CONTROL_TASK:
+			// to do
+			break;
+		case ESP_RESUME_CONTROL_TASK:
+			// to do
+			break;
 		default:
 			break;
 		}

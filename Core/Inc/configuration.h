@@ -12,15 +12,22 @@
 
 /*
  * Definitions for external flash memory access (w25q16)
+ * Hints: Page size is 256 Bytes, Sectors have 16 Pages, Blocks have 16 Sectors and there are 32 Blocks.
+ * 		  Can only write up to one page at a time indicating the page number and offset.
+ * 		  The respective sector or block has to be erased before writing!
  */
-#define FLASH_DEF_INIT_CODE    0xABCD     //Bytes for checking default initialization
-#define FLASH_CONFIG_ADDR      0 //Memory block0 sector 0 for storing of general configuration
-#define FLASH_CONFIG_SECTOR	   0 //sector 0, definition for erasing
-#define FLASH_AREA_ADDR        16 //Memory block0 sector 1 - start address(page number) of watering areas configuration
-#define FLASH_AREA_SECTOR	   1 //sector 1, definition for erasing
-#define FLASH_ADC_LOG_ADDR     16*16    //Memory block1 - start address(page number) of stored data from ADC readings
-#define FLASH_ACT_LOG_ADDR     16*16*30 //Memory block30 - start address(page number) of stored data from ADC readings
 
+#define FLASH_DEF_INIT_CODE    0xABCD     //Bytes for checking default initialization
+#define FLASH_CONFIG_ADDR      0 		  //Memory block0 sector 0 for storing of general configuration
+#define FLASH_CONFIG_SECTOR	   0 		  //sector 0, definition for erasing
+#define FLASH_AREA_ADDR        16 		  //Memory block0 sector 1 - start address(page number) of watering areas configuration
+#define FLASH_AREA_SECTOR	   1 		  //sector 1, definition for erasing
+#define FLASH_ADC_LOG_ADDR     16*16      //Memory block1 - start address(page number) of stored data from ADC readings
+#define FLASH_ADC_LOG_SECTOR   16         //Sector num 16 or Block1 sector 0
+#define FLASH_ADC_LOG_BLOCK_NUM	   1
+#define FLASH_ACT_LOG_ADDR     16*16*30   //Memory Block30 - start address(page number) of stored data from ADC readings
+#define FLASH_ACT_LOG_SECTOR   16*30      //Sector 480 or Block30 sector 0
+#define FLASH_ACT_LOG_BLOCK_NUM    30
 /*
  * Definitions for default configurations
  */
@@ -49,11 +56,13 @@
 #define ESP_CLEAR_DATA_ADC 0xCB
 #define ESP_GET_DATA_ACT   0xDA //get actuation data
 #define ESP_CLEAR_DATA_ACT 0xDB
+#define ESP_CLEAR_LOG	   0xEA
+#define ESP_CLEAR_CONF	   0xEB
 
-#define ESP_STOP_CONTROL_TASK    0xDA //suspend control task
-#define ESP_RESUME_CONTROL_TASK  0xDB //resume control task
+#define ESP_STOP_CONTROL_TASK    0xFA //suspend control task
+#define ESP_RESUME_CONTROL_TASK  0xFB //resume control task
 
-
+#define ACK_MASTER  0xE3E3E3E3   //Bytes for master Ack
 
 typedef struct generalConfig{
 	uint32_t adcConvTimeInterval;   //interval for ADC readings
