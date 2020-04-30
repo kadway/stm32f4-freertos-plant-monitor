@@ -53,7 +53,7 @@ void controlTask(void const * argument){
 						}
 #if (PRINTF_DEBUG_ACT == 1)
 						else{
-							printf("ControlTask, has area %d ->put in queue area with pump id %d queue status: %lu\n", aConf[areaIdx].areaID, aConf[areaIdx].pumpID, (uint32_t) queueErr);
+							printf("ControlTask, has area %d ->put in queue area with pump id %d\n", aConf[areaIdx].areaID, aConf[areaIdx].pumpID);
 							osDelay(2000);
 						}
 #endif
