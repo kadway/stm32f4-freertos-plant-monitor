@@ -53,7 +53,6 @@ osThreadId spiEspComTaskHandle;
 osThreadId adcTaskHandle;
 osThreadId controlTaskHandle;
 
-osSemaphoreId spiEspSemphTXHandle;
 osSemaphoreId spiEspSemphHandle;
 osSemaphoreId adcSemphHandle;
 
@@ -97,6 +96,7 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 	/* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */
+
 	printf("WARNING: Stack overflow!\nTask name: %s\nTask handle: %lu\n", pcTaskName, (uint32_t) xTask);
 }
 /* USER CODE END 4 */
@@ -114,6 +114,7 @@ void vApplicationMallocFailedHook(void)
    FreeRTOSConfig.h, and the xPortGetFreeHeapSize() API function can be used
    to query the size of free heap space that remains (although it does not
    provide information on how the remaining heap might be fragmented). */
+
 	printf("WARNING: vApplicationMallocFailedHook got called!\n");
 }
 /* USER CODE END 5 */
@@ -127,7 +128,6 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
 	*ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
 	*ppxIdleTaskStackBuffer = &xIdleStack[0];
 	*pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
-	/* place for user code */
 }                   
 /* USER CODE END GET_IDLE_TASK_MEMORY */
 
@@ -140,7 +140,6 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, Stack
   *ppxTimerTaskTCBBuffer = &xTimerTaskTCBBuffer;
   *ppxTimerTaskStackBuffer = &xTimerStack[0];
   *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
-  /* place for user code */
 }
 /* USER CODE END GET_TIMER_TASK_MEMORY */
 /**
@@ -184,7 +183,7 @@ void MX_FREERTOS_Init(void) {
 	osThreadDef(adcTask, adcConvTask, osPriorityNormal, 0, 300);
 	adcTaskHandle = osThreadCreate(osThread(adcTask), NULL);
 
-	/* definition and creation of contolTask */
+	/* definition and creation of controlTask */
 	osThreadDef(controlT, controlTask, osPriorityAboveNormal, 0, 400);
 	controlTaskHandle = osThreadCreate(osThread(controlT), NULL);
 	/* USER CODE BEGIN RTOS_THREADS */

@@ -2,7 +2,8 @@
  * control.c
  *
  *  Created on: Apr 24, 2020
- *      Author: johny
+ *      Author: João Gonçalves
+ *      		miguel.joao.goncalves at gmail
  */
 
 /**

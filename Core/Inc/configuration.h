@@ -2,7 +2,8 @@
  * configuration.h
  *
  *  Created on: Apr 24, 2020
- *      Author: johny
+ *      Author: João Gonçalves
+ *      	    miguel.joao.goncalves at gmail
  */
 
 #ifndef INC_CONFIGURATION_H_
@@ -32,7 +33,7 @@
  * Definitions for default configurations
  */
 #define N_AREA 5  //default numumber of watering areas
-#define N_SENS 5  //default numumber of moisture sensors
+#define N_SENS 15  //default numumber of moisture sensors
 #define N_PUMP 2  //default numumber of watering pumps
 #define N_SOV  5  //default numumber of solenoid valves
 #define MAX_N_PUMP 5 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles

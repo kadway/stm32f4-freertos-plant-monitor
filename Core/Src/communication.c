@@ -2,17 +2,33 @@
  * communication.c
  *
  *  Created on: Apr 24, 2020
- *      Author: johny
+ *      Author: João Gonçalves
+ *      	    miguel.joao.goncalves at gmail
  */
 
 #include "communication.h"
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi){
+	HAL_SPI_Abort_IT(hspi);
+	HAL_SPI_MspDeInit(hspi);
+	HAL_SPI_MspInit(hspi);
+	printf("Spi error..\n");
+	//osDelay(200);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	//temporary workaround for spi hanging on the busy flag when esp8266 gets rebooted
+	//reset system....
+	NVIC_SystemReset();
+}
+
 
 /**
  * @brief  Function implementing the thread for handling spi commands from ESP8266
  * @param  argument: Not used
  * @retval None
  */
-/* USER CODE END spiEspComTask */
+
 void spiEspComTask(void const * argument)
 {
 	uint8_t ackSlave = 0xCE;
@@ -29,6 +45,7 @@ void spiEspComTask(void const * argument)
 	mMeasTime_t dummyMoist;
 	wTime_t actuationData;
 	wTime_t dummyActuation;
+
 	/* need to take the semaphor the first time....*/
 	osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
@@ -63,6 +80,7 @@ void spiEspComTask(void const * argument)
 		case ESP_GET_AREA:
 			/* Send number of wArea elements */
 			nElm = gConf.nArea;
+			printf("Send %lu elements\n", nElm);
 			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&replyMaster, sizeof(uint32_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
@@ -121,6 +139,7 @@ void spiEspComTask(void const * argument)
 			/* Send ADC data */
 			/* Send number of elements */
 			nElm = getNumElements(mMeasTimeData);
+			printf("Send %lu elements\n", nElm);
 			HAL_SPI_TransmitReceive_DMA(&hspi2, (uint8_t*)&nElm, (uint8_t*)&replyMaster, sizeof(uint32_t));
 			osSemaphoreWait (spiEspSemphHandle, osWaitForever);
 
@@ -177,7 +196,6 @@ void spiEspComTask(void const * argument)
 				//To do: clear only adc data
 				osMutexRelease(flashMutexHandle);
 			}
-
 			break;
 
 		case ESP_CLEAR_DATA_ACT:
@@ -197,6 +215,11 @@ void spiEspComTask(void const * argument)
 				printf("Error or timeout getting Mutex in communication task\n");
 			}
 			else{
+				gConf.pageAct = FLASH_ACT_LOG_ADDR;
+				gConf.pageAdc = FLASH_ADC_LOG_ADDR;
+				gConf.pageOffsetAct = 0;
+				gConf.pageOffsetAdc = 0;
+
 				for(i=0; i<32;i++){
 					W25qxx_EraseSector(FLASH_ADC_LOG_BLOCK_NUM+i);
 				}

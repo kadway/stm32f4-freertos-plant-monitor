@@ -2,7 +2,8 @@
  * configuration.h
  *
  *  Created on: Apr 24, 2020
- *      Author: johny
+ *      Author: João Gonçalves
+ *      		miguel.joao.goncalves at gmail
  */
 
 
@@ -37,7 +38,6 @@ void configInit(void){
 #endif
 		/* Init default watering areas */
 
-
 		for (i=0; i<N_AREA; i++){
 			aConf[i].lastWateringtime = 0;
 			aConf[i].threshold = 0;
@@ -58,19 +58,21 @@ void configInit(void){
 			aConf[i].wateringDuration = WATERING_TIME;
 			aConf[i].wateringInterval = WATERING_INTERVAL+i*5000;
 			readWriteFlash((void *) &aConf[i], sizeof(wArea_t), wAreaData, WRITE, NULL, NULL);
-
 		}
 #if (PRINTF_DEBUG == 1)
-			printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
-			printf("Sizes of structures: generalConf %d areaConf %d\n", sizeof(gConf_t), sizeof(wArea_t));
-			osDelay(5000);
+		printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
+		printf("Sizes of structures: generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mMeasTime_t), sizeof(wTime_t));
+		osDelay(5000);
 #endif
 	}
 	else{
+		for (i=0; i<gConf.nArea; i++){
+			readWriteFlash((void *) &aConf[i], sizeof(wArea_t), wAreaData, READ, NULL, NULL);
+		}
 #if (PRINTF_DEBUG == 1)
 		printf("w25qxx init - Configuration recoverd from flash\r\n");
+		printf("Sizes of structures: generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mMeasTime_t), sizeof(wTime_t));
 #endif
-
 	}
 	initActuationTasks();
 }
@@ -120,39 +122,40 @@ void initActuationTasks(void){
 		}
 	}
 }
-
+//To do: need to erase the sectors in case memory is full and we want to start overwriting previous data in a circular way
 void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint16_t* pOffset){
 	uint16_t nBytes;
 	uint16_t nPage;
 	uint16_t nBytesPage;
 	uint16_t offset;
 	wArea_t *pWarea;
+	gConf_t *pConf;
+	wTime_t *pTimeData;
+	mMeasTime_t *pAdcData;
 
 	/* Data size must be smaller than the page size! (256 bytes) */
 	assert_param(size <= w25qxx.PageSize);
 
-	/* Must take a mutex here because several parallel tasks may try to access the global confifuration structures in parallel */
-	/* to do */
-
 	switch(type){
 
 	case(mMeasTimeData):{
-
+		pAdcData = (mMeasTime_t *) data;
 		if(operationType == WRITE){
-			W25qxx_WritePage((uint8_t*)data,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_WritePage((uint8_t*)pAdcData,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 		else{
-			W25qxx_ReadPage((uint8_t*)data,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_ReadPage((uint8_t*)pAdcData,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 		updateOffset(FLASH_ADC_LOG_ADDR, pPageNum, FLASH_ACT_LOG_ADDR, pOffset, size);
 		break;
 	}
 	case(wTimeData):{
+		pTimeData = (wTime_t *) data;
 		if(operationType == WRITE){
-			W25qxx_WritePage((uint8_t*)data, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_WritePage((uint8_t*)pTimeData, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 		else{
-			W25qxx_ReadPage((uint8_t*)data, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
+			W25qxx_ReadPage((uint8_t*)pTimeData, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
 
 		updateOffset(FLASH_ACT_LOG_ADDR, pPageNum, w25qxx.PageCount, pOffset, size);
@@ -171,17 +174,18 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 				/* If writting the first area then erase the sector before.*/
 				W25qxx_EraseSector(FLASH_AREA_SECTOR);
 			}
-			W25qxx_WritePage((uint8_t*)data, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
+			W25qxx_WritePage((uint8_t*)pWarea, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
 
 		}else{
-			W25qxx_ReadPage((uint8_t*)data, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
+			W25qxx_ReadPage((uint8_t*)pWarea, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
 		}
 		break;
 	}
 	case(gConfData):{
+		pConf = (gConf_t*) data;
 		/* Must erase previous data before writing new data on top*/
 		W25qxx_EraseSector(FLASH_CONFIG_SECTOR);
-		W25qxx_WritePage((uint8_t*)&data, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
+		W25qxx_WritePage((uint8_t*)pConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 		break;
 	}
 

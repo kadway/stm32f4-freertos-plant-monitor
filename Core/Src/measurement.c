@@ -3,6 +3,7 @@
  *
  *  Created on: Apr 24, 2020
  *      Author: João Gonçalves
+ *        		miguel.joao.goncalves@gmail.com
  */
 
 #include "main.h"
@@ -42,7 +43,7 @@ void adcConvTask(void const * argument)
 
 #if (PRINTF_DEBUG_ADC == 1)
 		for(i=0; i<N_ADC; i++){
-			printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)data[i] * 3300) / 4096));
+			printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)adcData[i] * 3300) / 4096));
 		}
 #endif
 

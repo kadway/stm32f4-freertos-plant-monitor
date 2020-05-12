@@ -48,7 +48,6 @@ extern "C" {
 extern osThreadId spiEspComTaskHandle;
 extern osThreadId adcTaskHandle;
 extern osThreadId controlTaskHandle;
-extern osSemaphoreId spiEspSemphTXHandle;
 extern osSemaphoreId spiEspSemphHandle;
 extern osSemaphoreId adcSemphHandle;
 extern osMutexId flashMutexHandle;
