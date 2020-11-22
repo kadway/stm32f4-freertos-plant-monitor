@@ -120,6 +120,7 @@ void actuationTask(void const * argument){
 
 #if (PRINTF_DEBUG_ACT == 1)
 		printf("Actuation task with index %lu runs, timer for %lu mili econds started\n", *id, pAreaConf->wateringDuration);
+		get_time();
 #endif
 		osThreadSuspend(pHandle->taskH);
 
