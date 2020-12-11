@@ -37,7 +37,6 @@ extern RTC_HandleTypeDef hrtc;
 /* USER CODE END Private defines */
 
 void MX_RTC_Init(void);
-void get_time(void);
 /* USER CODE BEGIN Prototypes */
 
 /* USER CODE END Prototypes */

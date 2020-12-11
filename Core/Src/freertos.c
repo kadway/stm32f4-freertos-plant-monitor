@@ -49,11 +49,11 @@
 
 
 /* USER CODE END Variables */
-osThreadId spiEspComTaskHandle;
+
 osThreadId adcTaskHandle;
 osThreadId controlTaskHandle;
 
-osSemaphoreId spiEspSemphHandle;
+
 osSemaphoreId adcSemphHandle;
 
 osMutexId flashMutexHandle;
@@ -141,6 +141,7 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, Stack
   *ppxTimerTaskStackBuffer = &xTimerStack[0];
   *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
 }
+
 /* USER CODE END GET_TIMER_TASK_MEMORY */
 /**
  * @brief  FreeRTOS initialization
@@ -153,14 +154,11 @@ void MX_FREERTOS_Init(void) {
 	/* USER CODE END Init */
 
 	/* USER CODE BEGIN RTOS_MUTEX */
-	  osMutexDef(flashMutex);
-	  flashMutexHandle = osMutexCreate(osMutex(flashMutex));
+	osMutexDef(flashMutex);
+	flashMutexHandle = osMutexCreate(osMutex(flashMutex));
 	/* USER CODE END RTOS_MUTEX */
 
 	/* Create the semaphores(s) */
-	/* definition and creation of spiEspSemph */
-	osSemaphoreDef(spiEspSemph);
-	spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
 	/* USER CODE BEGIN RTOS_SEMAPHORES */
 	osSemaphoreDef(adcSemph);
 	adcSemphHandle = osSemaphoreCreate(osSemaphore(adcSemph), 1);
@@ -175,9 +173,6 @@ void MX_FREERTOS_Init(void) {
 	/* USER CODE END RTOS_QUEUES */
 
 	/* Create the thread(s) */
-	/* definition and creation of spiEspComT */
-	osThreadDef(spiEspComT, spiEspComTask, osPriorityRealtime, 0, 300);
-	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 
 	/* definition and creation of adcTask */
 	osThreadDef(adcTask, adcConvTask, osPriorityNormal, 0, 300);
@@ -190,6 +185,8 @@ void MX_FREERTOS_Init(void) {
 	/* add threads, ... */
 	/* USER CODE END RTOS_THREADS */
 
+	/* Creation of SPI control task for comunication with ESP and semaphore*/
+	initSpiEspTask();
 }
 
 

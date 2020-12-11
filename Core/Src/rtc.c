@@ -21,19 +21,8 @@
 #include "rtc.h"
 
 /* USER CODE BEGIN 0 */
-void get_time(void)
-{
-	RTC_DateTypeDef gDate;
-	RTC_TimeTypeDef gTime;
-	/* Get the RTC current Time */
-	HAL_RTC_GetTime(&hrtc, &gTime, RTC_FORMAT_BIN);
-	/* Get the RTC current Date */
-	HAL_RTC_GetDate(&hrtc, &gDate, RTC_FORMAT_BIN);
-	/* Display time Format: hh:mm:ss */
-	printf("Time: %02d:%02d:%02d\n",gTime.Hours, gTime.Minutes, gTime.Seconds);
-	/* Display date Format: dd-mm-yy */
-	printf("Date: %02d-%02d-%2d\n",gDate.Date, gDate.Month, 2000 + gDate.Year);
-}
+
+
 /* USER CODE END 0 */
 
 RTC_HandleTypeDef hrtc;

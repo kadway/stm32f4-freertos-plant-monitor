@@ -11,7 +11,8 @@
 #include "w25qxx.h"
 osMessageQId actuationTaskQueueHandle;
 osThreadId actuationTaskHandle;
-
+osThreadId spiEspComTaskHandle;
+osSemaphoreId spiEspSemphHandle;
 
 void configInit(void){
 	uint16_t i=0, j= 0;
@@ -61,7 +62,7 @@ void configInit(void){
 		}
 #if (PRINTF_DEBUG == 1)
 		printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
-		printf("Sizes of structures: generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mMeasTime_t), sizeof(wTime_t));
+		printf("Sizes of structures: generalConf %d areaConf %d ADC data %d Actuation data %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mLog_t), sizeof(wLog_t));
 		osDelay(5000);
 #endif
 	}
@@ -71,7 +72,7 @@ void configInit(void){
 		}
 #if (PRINTF_DEBUG == 1)
 		printf("w25qxx init - Configuration recoverd from flash\r\n");
-		printf("Sizes of structures: generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mMeasTime_t), sizeof(wTime_t));
+		printf("Sizes of structures: generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mLog_t), sizeof(wLog_t));
 #endif
 	}
 	initActuationTasks();
@@ -81,6 +82,10 @@ void initActuationTasks(void){
 	uint8_t pumpID, areaID;
 	uint8_t queueSize = 0;
 	void const * pHandle = NULL;
+
+	/* definition for the tasks */
+	osThreadDef(actTask, actuationTask, osPriorityNormal, gConf.nPump, 300);
+
 	/* Loop over the number of existing pumps */
 
 	for (pumpID=0; pumpID<gConf.nPump; pumpID++){
@@ -96,9 +101,9 @@ void initActuationTasks(void){
 		}
 		if(queueSize > 0){
 			/* Create the queue(s) */
-			osMessageQDef(actuationQueue, queueSize, uint32_t);
+			osMessageQDef(pumpID, queueSize, uint32_t);
 			//osMailQDef(actuationQueue, queueSize, aConf);
-			savedHandles[pumpID].queueH = osMessageCreate(osMessageQ(actuationQueue), NULL);
+			savedHandles[pumpID].queueH = osMessageCreate(osMessageQ(pumpID), NULL);
 			//savedHandles[pumpID].queueH = osMailCreate(osMailQ(actuationQueue), NULL);
 
 			/* If memory allocation succedded pass the pointer on to the new task and timer */
@@ -107,7 +112,7 @@ void initActuationTasks(void){
 				queueSize = 0;
 
 				/* Creation of actuation task(s) */
-				osThreadDef(actTask, actuationTask, osPriorityNormal, MAX_N_PUMP, 300);
+
 				savedHandles[pumpID].taskH = osThreadCreate(osThread(actTask), pHandle);
 #if (PRINTF_DEBUG == 1)
 				printf("Created Queue and task for pump %d\n", pumpID+1);
@@ -122,6 +127,18 @@ void initActuationTasks(void){
 		}
 	}
 }
+
+
+void initSpiEspTask(void){
+	/* definition and creation of spiEspSemph */
+	osSemaphoreDef(spiEspSemph);
+	spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
+	/* definition and creation of spiEspComT */
+	osThreadDef(spiEspComT, spiEspComTask, osPriorityRealtime, 0, 300);
+	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
+}
+
+
 //To do: need to erase the sectors in case memory is full and we want to start overwriting previous data in a circular way
 void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint16_t* pOffset){
 	uint16_t nBytes;
@@ -130,16 +147,16 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 	uint16_t offset;
 	wArea_t *pWarea;
 	gConf_t *pConf;
-	wTime_t *pTimeData;
-	mMeasTime_t *pAdcData;
+	wLog_t *pTimeData;
+	mLog_t *pAdcData;
 
 	/* Data size must be smaller than the page size! (256 bytes) */
 	assert_param(size <= w25qxx.PageSize);
 
 	switch(type){
 
-	case(mMeasTimeData):{
-		pAdcData = (mMeasTime_t *) data;
+	case(mLogData):{
+		pAdcData = (mLog_t *) data;
 		if(operationType == WRITE){
 			W25qxx_WritePage((uint8_t*)pAdcData,  (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
@@ -149,8 +166,8 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		updateOffset(FLASH_ADC_LOG_ADDR, pPageNum, FLASH_ACT_LOG_ADDR, pOffset, size);
 		break;
 	}
-	case(wTimeData):{
-		pTimeData = (wTime_t *) data;
+	case(wLogData):{
+		pTimeData = (wLog_t *) data;
 		if(operationType == WRITE){
 			W25qxx_WritePage((uint8_t*)pTimeData, (uint32_t)*pPageNum, (uint32_t)*pOffset, (uint32_t)size);
 		}
@@ -216,21 +233,79 @@ uint32_t getNumElements(flashDataType type){
 	uint16_t nElemPage = 0;
 
 	switch(type){
-	case(mMeasTimeData):{
+	case(mLogData):{
 		nPage = gConf.pageAdc - FLASH_ADC_LOG_ADDR;
-		nElemPage = w25qxx.PageSize / sizeof(mMeasTime_t);
-		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc / sizeof(mMeasTime_t));
+		nElemPage = w25qxx.PageSize / sizeof(mLog_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAdc / sizeof(mLog_t));
 		break;
 	}
-	case(wTimeData):{
+	case(wLogData):{
 		nPage = gConf.pageAct - FLASH_ACT_LOG_ADDR;
-		nElemPage = w25qxx.PageSize / sizeof(wTime_t);
-		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct / sizeof(wTime_t));
+		nElemPage = w25qxx.PageSize / sizeof(wLog_t);
+		nElem = (nPage * nElemPage) + (gConf.pageOffsetAct / sizeof(wLog_t));
 		break;
 	}
 	default:
 		break;
 	}
 	return nElem;
+}
+
+void get_time(rtcTime_t *timenow)
+{
+	RTC_TimeTypeDef rtcTime;
+	RTC_DateTypeDef rtcDate;
+
+	/* Get the RTC current Time */
+	HAL_RTC_GetTime(&hrtc, &rtcTime, RTC_FORMAT_BIN);
+	/* Get the RTC current Date */
+	HAL_RTC_GetDate(&hrtc, &rtcDate, RTC_FORMAT_BIN);
+
+	timenow->Day=rtcDate.Date;
+	timenow->Month=rtcDate.Month;
+	timenow->Year=rtcDate.Year;
+	timenow->Hours=rtcTime.Hours;
+	timenow->Minutes=rtcTime.Minutes;
+	timenow->Seconds=rtcTime.Seconds;
+	timenow->TimeFormat=rtcTime.TimeFormat;
+
+#if (PRINTF_DEBUG_TIME == 1)
+	/* Display time Format: hh:mm:ss */
+	printf("Time: %02d:%02d:%02d\n",gTime->Hours, gTime->Minutes, gTime->Seconds);
+	/* Display date Format: dd-mm-yy */
+	printf("Date: %02d-%02d-%2d\n",gDate->Date, gDate->Month, 2000 + gDate->Year);
+#endif
+}
+
+void set_time (rtcTime_t *timenow)
+{
+
+  RTC_TimeTypeDef rtcTime;
+  RTC_DateTypeDef rtcDate;
+
+  /* Get the RTC current Time */
+  HAL_RTC_GetTime(&hrtc, &rtcTime, RTC_FORMAT_BIN);
+  /* Get the RTC current Date */
+  HAL_RTC_GetDate(&hrtc, &rtcDate, RTC_FORMAT_BIN);
+
+  rtcTime.Hours = timenow->Hours;
+  rtcTime.Minutes = timenow->Minutes;
+  rtcTime.Seconds = timenow->Seconds;
+  rtcTime.TimeFormat = timenow->TimeFormat;
+  rtcDate.Date = timenow->Day;
+  rtcDate.Month = timenow->Month;
+  rtcDate.Year = timenow->Year;
+
+  if (HAL_RTC_SetTime(&hrtc, &rtcTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  if (HAL_RTC_SetDate(&hrtc, &rtcDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, 0x32F2); // backup register
 }
 

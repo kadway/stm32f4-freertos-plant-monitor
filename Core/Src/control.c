@@ -15,13 +15,22 @@
 #include "control.h"
 #include "main.h"
 
+/*uint32_t elapsedtimeSeconds (time_t dateTime){
+
+	return dateTime->time.Hours * 60 + dateTime->time.Minutes * 60 + dateTime->time.Seconds;
+}*/
+
 void controlTask(void const * argument){
 	uint8_t areaIdx, sIdx, id;
 	uint32_t elapsedTime;
 	uint32_t average;
 	uint16_t count;
-
+	uint32_t tickNow;
+#if (PRINTF_DEBUG == 1)
+	uint32_t loop = 0;
+#endif
 	for(;;){
+		loop += 1;
 		/* Read each area configured in memory */
 		for (areaIdx=0; areaIdx<gConf.nArea; areaIdx++){
 
@@ -30,7 +39,8 @@ void controlTask(void const * argument){
 
 				if(aConf[areaIdx].openLoop){
 					/* In open loop just check if the watering interval has passed */
-					elapsedTime=HAL_GetTick()- aConf[areaIdx].lastWateringtime;
+					tickNow = HAL_GetTick();
+					elapsedTime = tickNow - aConf[areaIdx].lastWateringtime;
 				}
 				else{
 					/* In closed loop make average of measurements for the sensors in this area and compare with the threshold */
@@ -65,7 +75,10 @@ void controlTask(void const * argument){
 				average = 0;
 			}
 		}
-		osDelay(1000);
+#if (PRINTF_DEBUG == 1)
+		printf("-> ControlTask loop %lu\n", loop);
+#endif
+		osDelay(CONTROL_TASK_LOOP_TIME);
 	}
 }
 
@@ -79,7 +92,8 @@ void actuationTask(void const * argument){
 	osEvent message;
 	wArea_t *pAreaConf;
 	actTaskQueueH_t *pHandle = (actTaskQueueH_t *)argument;
-	wTime_t wateringTime;
+	wLog_t wateringTime;
+
 
 #if (PRINTF_DEBUG_ACT == 1)
 	uint32_t *id;
@@ -95,19 +109,19 @@ void actuationTask(void const * argument){
 		message = osMessageGet(pHandle->queueH,osWaitForever);
 		pAreaConf = (wArea_t *) message.value.p;
 #if (PRINTF_DEBUG_ACT == 1)
-		printf("Actuation task with index %lu runs, and got mail with pumpID %d\n", *id, pAreaConf->pumpID);
+		printf("Act task %lu got pump %d\n", *id, pAreaConf->pumpID);
 #endif
 		/* Update the area configuration with the new time of watering*/
 		pAreaConf->lastWateringtime = HAL_GetTick();
 
+		osMutexWait(flashMutexHandle,osWaitForever);
 		/* Prepare data for logging in external flash memory */
 		wateringTime.areaID = pAreaConf->areaID;
 		wateringTime.duration = pAreaConf->wateringDuration;
-		wateringTime.time = HAL_GetTick();
+		get_time(&wateringTime.dateTime);
 
-		osMutexWait(flashMutexHandle,osWaitForever);
 		/* Save the time of watering to flash*/
-		readWriteFlash((void *) &wateringTime, sizeof(wTime_t), wTimeData, WRITE, &gConf.pageAct, &gConf.pageOffsetAct);
+		readWriteFlash((void *) &wateringTime, sizeof(wLog_t), wLogData, WRITE, &gConf.pageAct, &gConf.pageOffsetAct);
 		/* Update the current page number and offset in the flash configuration structure */
 		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, WRITE, NULL, NULL);
 		osMutexRelease(flashMutexHandle);
@@ -119,8 +133,7 @@ void actuationTask(void const * argument){
 		osTimerStart(pHandle->timerH, pAreaConf->wateringDuration);
 
 #if (PRINTF_DEBUG_ACT == 1)
-		printf("Actuation task with index %lu runs, timer for %lu mili econds started\n", *id, pAreaConf->wateringDuration);
-		get_time();
+		printf("Act task %lu start timer %lu ms\n", *id, pAreaConf->wateringDuration);
 #endif
 		osThreadSuspend(pHandle->taskH);
 
@@ -133,7 +146,7 @@ void actuationTask(void const * argument){
 		actualPage = FLASH_ACT_LOG_ADDR;
 		offset =  0;
 		do{
-			readWriteFlash((void *) &wateringTime, sizeof(wTime_t), wTimeData, READ, &actualPage, &offset);
+			readWriteFlash((void *) &wateringTime, sizeof(wLog_t), wTimeData, READ, &actualPage, &offset);
 			printf("READ DATA->  Aread %d, Elapsed time %lu, watering duration %lu\n",wateringTime.areaID, wateringTime.time, wateringTime.duration);
 		}while(actualPage < gConf.pageAct || offset < gConf.pageOffsetAct);
 		osMutexRelease(flashMutexHandle);
@@ -142,7 +155,7 @@ void actuationTask(void const * argument){
 }
 
 void pumpTimerCallback(void const * argument){
-#if (PRINTF_DEBUG_ACT == 1)
+#if (PRINTF_DEBUG_TIMER == 1)
 	uint32_t *id;
 #endif
 	osTimerId myID = (osTimerId) argument;
@@ -151,7 +164,7 @@ void pumpTimerCallback(void const * argument){
 	while(myID != savedHandles[i].timerH){
 		i++;
 	}
-#if (PRINTF_DEBUG_ACT == 1)
+#if (PRINTF_DEBUG_TIMER == 1)
 	id = (uint32_t*) myID;
 	printf("Timer id %lu resumes task\n", *id );
 	osDelay(1000);

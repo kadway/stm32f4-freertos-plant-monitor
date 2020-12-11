@@ -27,12 +27,18 @@ void adcConvTask(void const * argument)
 {
 	uint16_t adcData [N_ADC];
 	uint8_t i;
-
+#if (PRINTF_DEBUG == 1)
+uint32_t loop = 0;
+#endif
 	/* Must take semaphore the first time... */
 	osSemaphoreWait (adcSemphHandle, osWaitForever);
-	lastAdcConv.time = 0;
+
 	for(;;)
 	{
+#if (PRINTF_DEBUG == 1)
+		loop+=1;
+		printf("-> adcConvTask loop %lu\n", loop);
+#endif
 		/*Set output to give supply to sensors */
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);
 		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adcData, sizeof(adcData)/sizeof(uint16_t));
@@ -47,8 +53,7 @@ void adcConvTask(void const * argument)
 		}
 #endif
 
-		//to do: get time from RTC and temperature from ds3231
-		lastAdcConv.time += 1;
+		//to do: get temperature from ds3231 or other device
 		lastAdcConv.temperature = 25;
 
 		/* Fill in conversion values in data structure and store it in external flash */
@@ -56,9 +61,12 @@ void adcConvTask(void const * argument)
 		for(i=0; i<gConf.nSens; i++){
 			lastAdcConv.meas[i] = adcData[i];
 		}
+
 		osMutexWait(flashMutexHandle,osWaitForever);
+		/* get actual time for logging to flash */
+		get_time(&lastAdcConv.dateTime);
 		/* Save the measurements to flash*/
-		readWriteFlash((void*)&lastAdcConv, sizeof(lastAdcConv), mMeasTimeData, WRITE, &gConf.pageAdc, &gConf.pageOffsetAdc);
+		readWriteFlash((void*)&lastAdcConv, sizeof(lastAdcConv), mLogData, WRITE, &gConf.pageAdc, &gConf.pageOffsetAdc);
 		/* Update the current page number and offset in the flash configuration structure */
 		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, WRITE, NULL, NULL);
 		osMutexRelease(flashMutexHandle);
