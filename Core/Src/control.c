@@ -111,7 +111,7 @@ void actuationTask(void const * argument){
 		message = osMessageGet(pHandle->queueH,osWaitForever);
 		pAreaConf = (wArea_t *) message.value.p;
 #if (PRINTF_DEBUG_ACT == 1)
-		printf("Act task %lu got pump %d\n", *id, pAreaConf->pumpID);
+		printf("Act task %lu. Area %d, pump %d\n", *id, pAreaConf->areaID, pAreaConf->pumpID);
 #endif
 		/* Update the area configuration with the new time of watering*/
 		pAreaConf->lastWateringtime = HAL_GetTick();
