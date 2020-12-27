@@ -11,5 +11,6 @@
  */
 #include "main.h"
 
+void dataIsReady(void);
 void spiEspComTask(void const * argument);
-
+void clearLog(void);

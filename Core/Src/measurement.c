@@ -27,7 +27,7 @@ void adcConvTask(void const * argument)
 {
 	uint16_t adcData [N_ADC];
 	uint8_t i;
-#if (PRINTF_DEBUG == 1)
+#if (PRINTF_DEBUG_ADC == 1)
 uint32_t loop = 0;
 #endif
 	/* Must take semaphore the first time... */
@@ -35,7 +35,7 @@ uint32_t loop = 0;
 
 	for(;;)
 	{
-#if (PRINTF_DEBUG == 1)
+#if (PRINTF_DEBUG_ADC == 1)
 		loop+=1;
 		printf("-> adcConvTask loop %lu\n", loop);
 #endif

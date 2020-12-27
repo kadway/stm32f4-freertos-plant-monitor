@@ -26,16 +26,18 @@ void controlTask(void const * argument){
 	uint32_t average;
 	uint16_t count;
 	uint32_t tickNow;
-#if (PRINTF_DEBUG == 1)
+#if (PRINTF_DEBUG_CTRL == 1)
 	uint32_t loop = 0;
 #endif
 	for(;;){
+#if (PRINTF_DEBUG_CTRL == 1)
 		loop += 1;
+#endif
 		/* Read each area configured in memory */
 		for (areaIdx=0; areaIdx<gConf.nArea; areaIdx++){
 
 			/*Check if pumpID is valid. must be a number less than or equal to defined number of used pumps */
-			if( aConf[areaIdx].pumpID <= gConf.nPump){
+			if( aConf[areaIdx].pumpID <= gConf.nPump && aConf[areaIdx].pumpID > 0){
 
 				if(aConf[areaIdx].openLoop){
 					/* In open loop just check if the watering interval has passed */
@@ -54,7 +56,7 @@ void controlTask(void const * argument){
 					average = average / count;
 				}
 				if((aConf[areaIdx].openLoop && elapsedTime>=aConf[areaIdx].wateringInterval) || (!(aConf[areaIdx].openLoop) && average >= aConf[areaIdx].threshold)){
-#if (PRINTF_DEBUG_ACT == 1)
+#if (PRINTF_DEBUG_CTRL == 1)
 					printf("Time elapsed %lu for area %d\n", elapsedTime, aConf[areaIdx].areaID);
 #endif
 						/*put the data in the queue */
@@ -62,7 +64,7 @@ void controlTask(void const * argument){
 							printf("Failed to put a message in queue\n");
 							osDelay(100);
 						}
-#if (PRINTF_DEBUG_ACT == 1)
+#if (PRINTF_DEBUG_CTRL == 1)
 						else{
 							printf("ControlTask, has area %d ->put in queue area with pump id %d\n", aConf[areaIdx].areaID, aConf[areaIdx].pumpID);
 							osDelay(2000);
@@ -75,7 +77,7 @@ void controlTask(void const * argument){
 				average = 0;
 			}
 		}
-#if (PRINTF_DEBUG == 1)
+#if (PRINTF_DEBUG_CTRL == 1)
 		printf("-> ControlTask loop %lu\n", loop);
 #endif
 		osDelay(CONTROL_TASK_LOOP_TIME);

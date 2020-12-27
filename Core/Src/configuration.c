@@ -19,8 +19,8 @@ void configInit(void){
 	W25qxx_ReadPage((uint8_t*)&gConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf));
 
 	if(gConf.initCode != FLASH_DEF_INIT_CODE){
-		//if(1){
 		/* Init general configurations */
+		//if(1){
 		gConf.initCode=FLASH_DEF_INIT_CODE;
 		gConf.nArea = N_AREA;
 		gConf.nSens = N_SENS;
@@ -35,7 +35,7 @@ void configInit(void){
 		/* Save to external flash */
 		W25qxx_WritePage((uint8_t*)&gConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
 #if (PRINTF_DEBUG == 1)
-		printf("w25qxx init - Default general configuration initialized to flash\r\n");
+		printf("w25qxx init - Default configuration initialized to flash\r\n");
 #endif
 		/* Init default watering areas */
 
@@ -53,14 +53,13 @@ void configInit(void){
 			}
 			//memset(aConf[i].sensID, 0, sizeof(aConf[i].sensID));
 			//memset(aConf[i].sovID, 0, sizeof(aConf[i].sovID));
-
 			aConf[i].areaID = i; //must start at zero for later indexing
 			aConf[i].pumpID = i+1; //starting id should be 1 so that zero is considered not existing (same for sensors and sovs)
 			aConf[i].wateringDuration = WATERING_TIME;
 			aConf[i].wateringInterval = WATERING_INTERVAL+i*5000;
 			readWriteFlash((void *) &aConf[i], sizeof(wArea_t), wAreaData, WRITE, NULL, NULL);
 		}
-#if (PRINTF_DEBUG == 1)
+#if (PRINTF_DEBUG_CONF == 1)
 		printf("w25qxx init - Default area configuration saved to flash. %d areas added.\r\n", N_AREA);
 		printf("Sizes of structures: generalConf %d areaConf %d ADC data %d Actuation data %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mLog_t), sizeof(wLog_t));
 		osDelay(5000);
@@ -68,11 +67,16 @@ void configInit(void){
 	}
 	else{
 		for (i=0; i<gConf.nArea; i++){
+			aConf[i].areaID = i;
 			readWriteFlash((void *) &aConf[i], sizeof(wArea_t), wAreaData, READ, NULL, NULL);
+#if (PRINTF_DEBUG_CONF == 1)
+			printf("Got areaID %d with pump %d\n", aConf[i].areaID, aConf[i].pumpID);
+			osDelay(5000);
+#endif
 		}
-#if (PRINTF_DEBUG == 1)
-		printf("w25qxx init - Configuration recoverd from flash\r\n");
-		printf("Sizes of structures: generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mLog_t), sizeof(wLog_t));
+#if (PRINTF_DEBUG_CONF == 1)
+		printf("Configuration recoverd\r\n");
+		printf("generalConf %d areaConf %d adcdata %d actdata %d\n", sizeof(gConf_t), sizeof(wArea_t), sizeof(mLog_t), sizeof(wLog_t));
 #endif
 	}
 	initActuationTasks();
@@ -96,6 +100,7 @@ void initActuationTasks(void){
 				queueSize += 1;
 #if (PRINTF_DEBUG == 1)
 				printf("Water area %d uses pump %d. Queue size is now %d \n", areaID+1,pumpID+1, queueSize);
+				osDelay(5000);
 #endif
 			}
 		}
@@ -116,12 +121,14 @@ void initActuationTasks(void){
 				savedHandles[pumpID].taskH = osThreadCreate(osThread(actTask), pHandle);
 #if (PRINTF_DEBUG == 1)
 				printf("Created Queue and task for pump %d\n", pumpID+1);
+				osDelay(5000);
 #endif
 				osTimerDef(wateringTimer, pumpTimerCallback);
 				savedHandles[pumpID].timerH = osTimerCreate(osTimer(wateringTimer), osTimerOnce, NULL);
 
 #if (PRINTF_DEBUG == 1)
 				printf("Created Timer for pump %d\n", pumpID+1);
+				osDelay(5000);
 #endif
 			}
 		}
@@ -134,7 +141,7 @@ void initSpiEspTask(void){
 	osSemaphoreDef(spiEspSemph);
 	spiEspSemphHandle = osSemaphoreCreate(osSemaphore(spiEspSemph), 1);
 	/* definition and creation of spiEspComT */
-	osThreadDef(spiEspComT, spiEspComTask, osPriorityRealtime, 0, 300);
+	osThreadDef(spiEspComT, spiEspComTask, osPriorityRealtime, 0, 600);
 	spiEspComTaskHandle = osThreadCreate(osThread(spiEspComT), NULL);
 }
 
@@ -187,10 +194,9 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		offset = nBytes - nPage*nBytesPage;
 
 		if(operationType == WRITE){
-			if(pWarea->areaID == 0){
-				/* If writting the first area then erase the sector before.*/
+			/*if(pWarea->areaID == 0){
 				W25qxx_EraseSector(FLASH_AREA_SECTOR);
-			}
+			}*/
 			W25qxx_WritePage((uint8_t*)pWarea, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
 
 		}else{
