@@ -95,6 +95,7 @@ void actuationTask(void const * argument){
 	wArea_t *pAreaConf;
 	actTaskQueueH_t *pHandle = (actTaskQueueH_t *)argument;
 	wLog_t wateringTime;
+	uint8_t i;
 
 
 #if (PRINTF_DEBUG_ACT == 1)
@@ -130,6 +131,15 @@ void actuationTask(void const * argument){
 
 		/* Activate the respective pumps and solenoid valves */
 		/* to do... */
+		for(i=0; i<MAX_N_SOV; i++){
+			if(pAreaConf->sovID[i] > 0 && pAreaConf->sovID[i] <= MAX_N_SOV){
+				SOV_ON(pAreaConf->sovID[i]-1)
+			}
+		}
+
+		if(pAreaConf->pumpID > 0 && pAreaConf->pumpID <= MAX_N_PUMP){
+			PUMP_ON(pAreaConf->pumpID-1)
+		}
 
 		/*Start the watering timer*/
 		osTimerStart(pHandle->timerH, pAreaConf->wateringDuration);
@@ -140,7 +150,15 @@ void actuationTask(void const * argument){
 		osThreadSuspend(pHandle->taskH);
 
 		/* De-activate the respective pumps and solenoid valves */
-		/* to do... */
+		for(i=0; i<MAX_N_SOV; i++){
+			if(pAreaConf->sovID[i] > 0 && pAreaConf->sovID[i] <= MAX_N_SOV){
+				SOV_OFF(pAreaConf->sovID[i]-1)
+			}
+		}
+
+		if(pAreaConf->pumpID > 0 && pAreaConf->pumpID <= MAX_N_PUMP){
+			PUMP_OFF(pAreaConf->pumpID-1)
+		}
 
 #if (PRINTF_DEBUG_ACT_FLASH == 1)
 		osMutexWait(flashMutexHandle,osWaitForever);

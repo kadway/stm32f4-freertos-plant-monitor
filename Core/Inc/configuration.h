@@ -36,13 +36,13 @@
 #define N_SENS 15  //default numumber of moisture sensors
 #define N_PUMP 2  //default numumber of watering pumps
 #define N_SOV  5  //default numumber of solenoid valves
-#define MAX_N_PUMP 5 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles
+#define MAX_N_PUMP 3 //maximum number of pumps, necessary for static array containing the actuation tasks and queues handles
 
 #define WATERING_TIME 1 *1000/*ms*/  //default watering time in ticks (milisecond)
 #define WATERING_INTERVAL 7*1000/*ms*/ //default interval for watering in ticks (milisecond)
 #define MEAS_INTERVAL 3600 * 1000/*ms*/ //default interval for ADC readings in ticks (milisecond)
 #define MAX_N_SENS 15
-#define MAX_N_SOV  10
+#define MAX_N_SOV 13
 #define MAX_N_AREA 30
 #define N_ADC  15
 
@@ -145,6 +145,14 @@ typedef enum flashOType {
 	READ = 0,
 	WRITE
 }flashOpType;
+
+/* Using GPIOE 0 to 12 */
+#define SOV_ON(pin) HAL_GPIO_WritePin(GPIOE, 1 << pin, GPIO_PIN_SET);
+#define SOV_OFF(pin) HAL_GPIO_WritePin(GPIOE, 1 << pin, GPIO_PIN_RESET);
+
+/* Using GPIOE 13 and 15 */
+#define PUMP_ON(pin) HAL_GPIO_WritePin(GPIOE, 0x2000 << pin, GPIO_PIN_SET);
+#define PUMP_OFF(pin) HAL_GPIO_WritePin(GPIOE, 0x2000 << pin, GPIO_PIN_RESET);
 
 /*general configuration structures*/
 gConf_t gConf;
