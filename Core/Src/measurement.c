@@ -53,8 +53,9 @@ uint32_t loop = 0;
 		}
 #endif
 
-		//to do: get temperature from ds3231 or other device
-		lastAdcConv.temperature = 25;
+		/* get temperature from ds3231 */
+		forceTempConv();
+		lastAdcConv.temperature = getTemp();
 
 		/* Fill in conversion values in data structure and store it in external flash */
 		/* Save up only until the number of used sensors */

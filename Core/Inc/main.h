@@ -46,6 +46,7 @@ extern "C" {
 #include "control.h"
 #include "measurement.h"
 #include "communication.h"
+#include "ds3231.h"
 
 extern osThreadId spiEspComTaskHandle;
 extern osThreadId adcTaskHandle;
@@ -57,7 +58,7 @@ extern osMutexId flashMutexHandle;
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #define PRINTF_DEBUG 1
-#define PRINTF_DEBUG_ACT 1
+#define PRINTF_DEBUG_ACT 0
 #define PRINTF_DEBUG_ACT_FLASH 0
 #define PRINTF_DEBUG_ADC 0
 #define PRINTF_DEBUG_ADC_FLASH 0
