@@ -59,7 +59,7 @@ uint32_t loop = 0;
 		/* Fill in conversion values in data structure and store it in external flash */
 		/* Save up only until the number of used sensors */
 		for(i=0; i<gConf.nSens; i++){
-			lastAdcConv.meas[i] = adcData[i];
+			lastAdcConv.meas[i] = (uint16_t) (( (uint32_t)adcData[i] * 3300) / 4096);
 		}
 
 		osMutexWait(flashMutexHandle,osWaitForever);

@@ -22,10 +22,10 @@
 
 void controlTask(void const * argument){
 	uint8_t areaIdx, sIdx, id;
-	uint32_t elapsedTime;
-	uint32_t average;
-	uint16_t count;
-	uint32_t tickNow;
+	uint32_t elapsedTime = 0;
+	uint32_t average = 0;
+	uint16_t count = 0;
+	uint32_t tickNow = 0;
 #if (PRINTF_DEBUG_CTRL == 1)
 	uint32_t loop = 0;
 #endif
@@ -54,6 +54,7 @@ void controlTask(void const * argument){
 						}
 					}
 					average = average / count;
+					count = 0;
 				}
 				if((aConf[areaIdx].openLoop && elapsedTime>=aConf[areaIdx].wateringInterval) || (!(aConf[areaIdx].openLoop) && average >= aConf[areaIdx].threshold)){
 #if (PRINTF_DEBUG_CTRL == 1)
