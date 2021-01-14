@@ -79,6 +79,7 @@ void spiEspComTask(void const * argument)
 					printf("Error or timeout getting spiEspSemphHandle in communication task (send gConf)\n");
 					osDelay(1000);
 				}
+				dataNotReady();
 			}
 			break;
 			/* END SEND CONFIGURATION DATA*/
@@ -95,6 +96,7 @@ void spiEspComTask(void const * argument)
 				osDelay(1000);
 				break;
 			}
+			dataNotReady();
 
 			if ( replyMaster == ACK_MASTER){
 
@@ -118,7 +120,7 @@ void spiEspComTask(void const * argument)
 						osDelay(1000);
 						break;
 					}
-
+					dataNotReady();
 				}
 			}
 
@@ -136,6 +138,7 @@ void spiEspComTask(void const * argument)
 				osDelay(1000);
 				break;
 			}
+			dataNotReady();
 
 			if(osMutexWait(flashMutexHandle,200)!= osOK){
 				printf("Error or timeout getting Mutex in communication task\n");
@@ -162,6 +165,7 @@ void spiEspComTask(void const * argument)
 					osDelay(1000);
 					break;
 				}
+				dataNotReady();
 			}
 
 			if(osMutexWait(flashMutexHandle,200)!= osOK){
@@ -205,6 +209,7 @@ void spiEspComTask(void const * argument)
 				osDelay(1000);
 				break;
 			}
+			dataNotReady();
 
 			if ( replyMaster == ACK_MASTER){
 				if(osMutexWait(flashMutexHandle,200)!= osOK){
@@ -226,6 +231,7 @@ void spiEspComTask(void const * argument)
 						osDelay(1000);
 						break;
 					}
+					dataNotReady();
 				}
 				/* Give the mutex only after all data has been transfered or when timeout occurs*/
 				osMutexRelease(flashMutexHandle);
@@ -244,6 +250,7 @@ void spiEspComTask(void const * argument)
 				osDelay(1000);
 				break;
 			}
+			dataNotReady();
 
 			if ( replyMaster == ACK_MASTER){
 				if(osMutexWait(flashMutexHandle,200)!= osOK){
@@ -265,6 +272,7 @@ void spiEspComTask(void const * argument)
 						osDelay(1000);
 						break;
 					}
+					dataNotReady();
 				}
 				/* Give the mutex only after all data has been transfered */
 				osMutexRelease(flashMutexHandle);
@@ -323,10 +331,10 @@ void spiEspComTask(void const * argument)
 
 void dataIsReady(void){
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
-	osDelay(1);
+}
+void dataNotReady(void){
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
 }
-
 /* Clear all logged data sectors where ADC and Actuation data is being stored */
 void clearLog(void){
 	/* To check: not working!

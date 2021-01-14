@@ -41,6 +41,8 @@ uint32_t loop = 0;
 #endif
 		/*Set output to give supply to sensors */
 		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);
+		/*some delay to allow sensor startup after supply is given*/
+		osDelay(2000);
 		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&adcData, sizeof(adcData)/sizeof(uint16_t));
 		osSemaphoreWait (adcSemphHandle, osWaitForever);
 		/* Reset supply to sensors */
@@ -49,7 +51,7 @@ uint32_t loop = 0;
 
 #if (PRINTF_DEBUG_ADC == 1)
 		for(i=0; i<N_ADC; i++){
-			printf("Adc %d data: %d\n", i, (uint16_t) (( (uint32_t)adcData[i] * 3300) / 4096));
+			printf("Adc %d data: %d\n", i+1, (uint16_t) (( (uint32_t)adcData[i] * 3300) / 4096));
 		}
 #endif
 
