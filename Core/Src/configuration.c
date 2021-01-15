@@ -148,9 +148,8 @@ void initSpiEspTask(void){
 
 //To do: need to erase the sectors in case memory is full and we want to start overwriting previous data in a circular way
 void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType operationType, uint16_t* pPageNum, uint16_t* pOffset){
-	uint16_t nBytes;
+	uint16_t maxAreas;
 	uint16_t nPage;
-	uint16_t nBytesPage;
 	uint16_t offset;
 	wArea_t *pWarea;
 	gConf_t *pConf;
@@ -186,17 +185,13 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		break;
 	}
 	case(wAreaData):{
-		pWarea = data;
+		pWarea = (wArea_t *) data;
 		/* Get the page number and offset for the given area */
-		nBytes = pWarea->areaID * sizeof(wArea_t);
-		nPage =  nBytes / w25qxx.PageSize;
-		nBytesPage = (w25qxx.PageSize / sizeof(wArea_t)) * sizeof(wArea_t);
-		offset = nBytes - nPage*nBytesPage;
+		maxAreas = w25qxx.PageSize / sizeof(wArea_t);
+		nPage = pWarea->areaID / maxAreas;
+		offset = (pWarea->areaID * sizeof(wArea_t)) - ((maxAreas -1) * sizeof(wArea_t) * nPage) - (sizeof(wArea_t)*nPage);
 
 		if(operationType == WRITE){
-			/*if(pWarea->areaID == 0){
-				W25qxx_EraseSector(FLASH_AREA_SECTOR);
-			}*/
 			W25qxx_WritePage((uint8_t*)pWarea, (uint32_t)nPage + FLASH_AREA_ADDR, (uint32_t)offset, (uint32_t)size);
 
 		}else{
@@ -205,7 +200,7 @@ void readWriteFlash(void * data, uint8_t size, flashDataType type, flashOpType o
 		break;
 	}
 	case(gConfData):{
-		pConf = (gConf_t*) data;
+		pConf = (gConf_t *) data;
 		/* Must erase previous data before writing new data on top*/
 		W25qxx_EraseSector(FLASH_CONFIG_SECTOR);
 		W25qxx_WritePage((uint8_t*)pConf, FLASH_CONFIG_ADDR, 0, sizeof(gConf_t));
