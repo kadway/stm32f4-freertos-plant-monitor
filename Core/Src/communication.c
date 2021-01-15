@@ -337,26 +337,21 @@ void dataNotReady(void){
 }
 /* Clear all logged data sectors where ADC and Actuation data is being stored */
 void clearLog(void){
-	/* To check: not working!
-	 int i;
-		if(osMutexWait(flashMutexHandle,200)!= osOK){
+	int i;
+	if(osMutexWait(flashMutexHandle,200)!= osOK){
 		printf("Error or timeout getting Mutex in communication task\n");
 	}
 	else{
-		osThreadSuspend(controlTaskHandle);
-		osThreadSuspend(adcTaskHandle);
+		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, READ, NULL, NULL);
 		gConf.pageAct = FLASH_ACT_LOG_ADDR;
 		gConf.pageAdc = FLASH_ADC_LOG_ADDR;
 		gConf.pageOffsetAct = 0;
 		gConf.pageOffsetAdc = 0;
 		readWriteFlash((void *) &gConf, sizeof(gConf_t), gConfData, WRITE, NULL, NULL);
-
-		for(i=0; i<32;i++){
-			W25qxx_EraseSector(FLASH_ADC_LOG_BLOCK_NUM+i);
+		for(i=0; i<FLASH_LAST_BLOCK;i++){
+			W25qxx_EraseBlock(FLASH_ADC_LOG_BLOCK_NUM+i);
 		}
-		osThreadResume(controlTaskHandle);
-		osThreadResume(adcTaskHandle);
 		osMutexRelease(flashMutexHandle);
-	}*/
+	}
 }
 

@@ -25,10 +25,12 @@
 #define FLASH_AREA_SECTOR	   1 		  //sector 1, definition for erasing
 #define FLASH_ADC_LOG_ADDR     16*16      //Memory block1 - start address(page number) of stored data from ADC readings
 #define FLASH_ADC_LOG_SECTOR   16         //Sector num 16 or Block1 sector 0
-#define FLASH_ADC_LOG_BLOCK_NUM	   1
+#define FLASH_ADC_LOG_BLOCK_NUM	1
 #define FLASH_ACT_LOG_ADDR     16*16*30   //Memory Block30 - start address(page number) of stored data from ADC readings
 #define FLASH_ACT_LOG_SECTOR   16*30      //Sector 480 or Block30 sector 0
-#define FLASH_ACT_LOG_BLOCK_NUM    30
+#define FLASH_ACT_LOG_BLOCK_NUM 30
+#define FLASH_LAST_BLOCK        31
+
 /*
  * Definitions for default configurations
  */
