@@ -132,8 +132,3 @@ I'm also open for suggestions if you have ideas for To-Do's.
 #### To do:
 * Complete/extend the communication task with additional commands (configure rtc... etc)
 * Consider that the flash sectors for the logged data (moisture and watering times) have to be erased in case they need to be overwritten
-
-#### known bugs:
- * max of 5 watering areas can be stored due to incorrect offset calculation when saving the data structures to the external flash.
- * SPI command for clearing the logged data to the flash is corrupting the configuration data,
-    work around is to read all saved data and reset to default configuration (erases the external flash completely before writing defaults)
